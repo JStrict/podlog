@@ -288,27 +288,53 @@
     $('st-table').innerHTML = html;
     $$('#st-table .pname').forEach(el => el.onclick = () => openProfile(el.dataset.pid));
 
-    const recent = season.games.slice(-3).reverse().map(g =>
-      'G' + g.number + ' · ' + playerName(g.placements[0]) + ' 1st').join('&nbsp;&nbsp;&nbsp;');
-    $('st-recent').innerHTML = recent || '—';
+    const recentGames = season.games.slice(-5).reverse();
+    $('st-recent').innerHTML = '';
+    if (!recentGames.length) { $('st-recent').innerHTML = '<span class="muted">—</span>'; }
+    recentGames.forEach(g => {
+      const b = document.createElement('button');
+      b.className = 'recent-row';
+      b.innerHTML = '<b>G' + g.number + '</b><span class="muted">' + fmtDate(g.date) + '</span><span>' + esc(playerName(g.placements[0])) + ' 1st</span><span class="chev">›</span>';
+      b.onclick = () => openLog(g.id);
+      $('st-recent').appendChild(b);
+    });
   }
 
   // ---------- LOG GAME ----------
   const logDraft = { count: 0, slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elims: {} };
   const MANA = ['W', 'U', 'B', 'R', 'G', 'C'];
 
-  function openLog() {
+  function openLog(editId) {
     const st = Store.state;
     const season = Store.activeSeason();
     if (!season || season.status !== 'active') return;
-    logDraft.count = st.players.length;
-    logDraft.slots = new Array(logDraft.count).fill(null);
-    logDraft.date = todayISO();
-    logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elims = {};
-    $('log-title').textContent = 'Log Game ' + (season.games.length + 1);
-    $('log-date').textContent = 'Today, ' + fmtDate(logDraft.date);
+    logDraft.editingId = editId || null;
+    if (editId) {
+      const g = season.games.find(g => g.id === editId);
+      if (!g) return;
+      logDraft.count = g.placements.length;
+      logDraft.slots = g.placements.slice();
+      logDraft.date = g.date;
+      logDraft.firstBlood = g.firstBlood || '';
+      logDraft.turns = g.turns || '';
+      logDraft.colors = Object.assign({}, g.colors);
+      logDraft.decks = Object.assign({}, g.decks);
+      logDraft.elims = Object.assign({}, g.eliminations);
+      $('log-title').textContent = 'Edit Game ' + g.number;
+      $('log-review').textContent = 'Review changes';
+    } else {
+      logDraft.count = st.players.length;
+      logDraft.slots = new Array(logDraft.count).fill(null);
+      logDraft.date = todayISO();
+      logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elims = {};
+      $('log-title').textContent = 'Log Game ' + (season.games.length + 1);
+      $('log-review').textContent = 'Review';
+    }
+    $('log-date').textContent = fmtDateLong(logDraft.date);
     $('log-opts').classList.add('hidden');
+    $('log-delete').classList.toggle('hidden', !editId);
     renderLogSlots();
+    renderLogOpts();
     show('s-log');
   }
 
@@ -349,19 +375,24 @@
     const assigned = logDraft.slots.filter(Boolean);
     if (!assigned.length) { wrap.innerHTML = ''; return; }
     let html = '<p class="section-h">First blood</p><select class="field" id="opt-fb"><option value="">—</option>' +
-      assigned.map(id => '<option value="' + id + '">' + esc(playerName(id)) + '</option>').join('') + '</select>';
-    html += '<p class="section-h">Turns</p><input class="field" id="opt-turns" type="number" min="1" placeholder="e.g. 9">';
+      assigned.map(id => '<option value="' + id + '"' + (logDraft.firstBlood === id ? ' selected' : '') + '>' + esc(playerName(id)) + '</option>').join('') + '</select>';
+    html += '<p class="section-h">Turns</p><input class="field" id="opt-turns" type="number" min="1" placeholder="e.g. 9" value="' + esc(logDraft.turns || '') + '">';
     html += '<p class="section-h">Colors & decks</p>';
     assigned.forEach(id => {
+      const cols = logDraft.colors[id] || [];
       html += '<div style="margin-top:10px"><b>' + esc(playerName(id)) + '</b><div class="mana-row" data-mana="' + id + '">' +
-        MANA.map(m => '<button class="mana" data-m="' + m + '">' + m + '</button>').join('') + '</div>' +
-        '<input class="field mt" data-deck="' + id + '" placeholder="Deck nickname (optional)" style="padding:10px 12px;font-size:14px">' +
+        MANA.map(m => '<button class="mana' + (cols.includes(m) ? ' on' : '') + '" data-m="' + m + '">' + m + '</button>').join('') + '</div>' +
+        '<input class="field mt" data-deck="' + id + '" placeholder="Deck nickname (optional)" style="padding:10px 12px;font-size:14px" value="' + esc(logDraft.decks[id] || '') + '">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="muted" style="font-size:13px">Eliminations</span>' +
         '<button class="stepper-btn" data-el="-1" data-p="' + id + '" style="width:34px;height:34px;font-size:18px">−</button>' +
-        '<span data-elv="' + id + '">0</span>' +
+        '<span data-elv="' + id + '">' + (logDraft.elims[id] || 0) + '</span>' +
         '<button class="stepper-btn" data-el="1" data-p="' + id + '" style="width:34px;height:34px;font-size:18px">+</button></div></div>';
     });
     wrap.innerHTML = html;
+    const fbSel = wrap.querySelector('#opt-fb');
+    if (fbSel) fbSel.onchange = () => { logDraft.firstBlood = fbSel.value; };
+    const turnIn = wrap.querySelector('#opt-turns');
+    if (turnIn) turnIn.oninput = () => { logDraft.turns = turnIn.value; };
     $$('#log-opts .mana').forEach(b => b.onclick = () => {
       const pid = b.parentElement.dataset.mana;
       logDraft.colors[pid] = logDraft.colors[pid] || [];
@@ -390,14 +421,22 @@
       renderConfirm();
       show('s-confirm');
     };
+    $('log-delete').onclick = () => {
+      const g = Store.activeSeason().games.find(g => g.id === logDraft.editingId);
+      if (g && confirm('Delete Game ' + g.number + '? This cannot be undone.')) {
+        Store.deleteGame(logDraft.editingId);
+        enterMain('standings');
+      }
+    };
   }
 
   // ---------- CONFIRM ----------
   function renderConfirm() {
     const st = Store.state;
     const season = Store.activeSeason();
-    const n = season.games.length + 1;
-    $('confirm-title').textContent = 'Confirm Game ' + n;
+    const editing = !!logDraft.editingId;
+    const n = editing ? season.games.find(g => g.id === logDraft.editingId).number : season.games.length + 1;
+    $('confirm-title').textContent = (editing ? 'Edit Game ' : 'Confirm Game ') + n;
     $('confirm-sub').textContent = fmtDateLong(logDraft.date) + ' · ' + logDraft.count + ' players';
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
     $('confirm-slots').innerHTML = logDraft.slots.map((pid, i) =>
@@ -406,12 +445,13 @@
     const game = {
       date: logDraft.date, placements: logDraft.slots.slice(),
       firstBlood: logDraft.firstBlood || null,
-      turns: parseInt(($('opt-turns') || {}).value, 10) || null,
+      turns: parseInt(logDraft.turns, 10) || null,
       colors: Object.assign({}, logDraft.colors),
       decks: Object.assign({}, logDraft.decks),
       eliminations: Object.assign({}, logDraft.elims),
     };
-    const pv = S.previewImpact(st.players, season.games, game);
+    const base = editing ? season.games.filter(g => g.id !== logDraft.editingId) : season.games;
+    const pv = S.previewImpact(st.players, base, game);
     $('confirm-impact').innerHTML = pv.moves.map(m => {
       const arrow = m.isNew ? '<span class="flat">new</span>'
         : m.move > 0 ? '<span class="up">▲' + m.move + '</span>'
@@ -419,9 +459,13 @@
       return '<div class="impact-row"><span>' + esc(m.name) + '</span><span>' +
         m.beforeW + '–' + m.beforeL + ' → <b>' + m.afterW + '–' + m.afterL + '</b> · ' + Math.round(m.afterPct * 100) + '% ' + arrow + '</span></div>';
     }).join('');
+    $('confirm-yes').textContent = editing ? 'Save changes' : 'Confirm';
     $('confirm-yes').onclick = () => {
-      const fb = $('opt-fb');
-      if (fb) game.firstBlood = fb.value || null;
+      if (editing) {
+        Store.updateGame(logDraft.editingId, game);
+        enterMain('standings');
+        return;
+      }
       const saved = Store.logGame(game);
       // game-count seasons: stamp "begins" on first game
       if (season.type === 'games' && season.games.length === 1) {
@@ -588,6 +632,53 @@
     const s = Store.state.settings;
     $('set-remind').checked = s.remind;
     $('set-milestone').checked = s.milestone;
+    // pod
+    const pod = Store.state.pod;
+    if (pod) {
+      $('set-podname').value = pod.name;
+      swatchRow($('set-podcolors'), pod.color, hex => { pod.color = hex; Store.save(); applyPodColor(); });
+      const gg = $('set-podglyphs');
+      if (!gg.children.length) {
+        ['◆', '●', '▲', '■', '♛', '⬟', '⬢', '✦', '☾', '⚑', '❖', '⬣'].forEach(g => {
+          const b = document.createElement('button');
+          b.textContent = g;
+          b.onclick = () => { pod.glyph = g; pod.iconDataUrl = null; Store.save(); $$('#set-podglyphs button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); };
+          gg.appendChild(b);
+        });
+      }
+    }
+    // season
+    const season = Store.activeSeason();
+    const sw = $('set-season');
+    if (season && season.status === 'active') {
+      if (season.type === 'games') {
+        sw.innerHTML = '<p class="muted" style="font-size:14px;margin:0 0 8px">' + esc(season.name) + ' · game count</p>' +
+          '<div style="display:flex;gap:10px;align-items:center"><input class="field" id="set-games" type="number" min="1" max="500" value="' + season.gameCount + '" style="max-width:120px">' +
+          '<span class="muted" style="font-size:13px">' + season.games.length + ' logged so far</span></div>';
+        $('set-games').onchange = e => {
+          season.gameCount = Math.max(1, parseInt(e.target.value, 10) || 1);
+          Store.save();
+        };
+      } else {
+        sw.innerHTML = '<p class="muted" style="font-size:14px;margin:0 0 8px">' + esc(season.name) + ' · date range</p>' +
+          '<input class="field" id="set-start" type="date" value="' + (season.startDate || '') + '">' +
+          '<input class="field mt" id="set-end" type="date" value="' + (season.endDate || '') + '">';
+        const syncCal = () => {
+          const st = Store.state;
+          const sEntry = st.calendar.find(e => e.type === 'season' && e.title === season.name + ' begins');
+          const eEntry = st.calendar.find(e => e.type === 'season' && e.title === season.name + ' ends');
+          if (sEntry) sEntry.date = season.startDate;
+          if (eEntry) eEntry.date = season.endDate;
+          Store.save();
+        };
+        $('set-start').onchange = e => { if (e.target.value) { season.startDate = e.target.value; syncCal(); } };
+        $('set-end').onchange = e => { if (e.target.value) { season.endDate = e.target.value; syncCal(); } };
+      }
+    } else if (season) {
+      sw.innerHTML = '<p class="muted" style="font-size:14px">' + esc(season.name) + ' is locked. Start a new season from Standings to change the length.</p>';
+    } else {
+      sw.innerHTML = '';
+    }
     const sr = $('set-roster'); sr.innerHTML = '';
     Store.state.players.forEach(p => {
       const row = document.createElement('div'); row.className = 'player-row';
@@ -600,6 +691,18 @@
   }
 
   function initSettings() {
+    $('set-podname').onchange = e => {
+      const v = e.target.value.trim();
+      if (v && Store.state.pod) { Store.state.pod.name = v; Store.save(); }
+    };
+    $('set-podicon-upload').onclick = () => $('set-podicon-file').click();
+    $('set-podicon-file').onchange = e => {
+      const f = e.target.files[0]; if (!f || !Store.state.pod) return;
+      const r = new FileReader();
+      r.onload = () => { Store.state.pod.iconDataUrl = r.result; Store.state.pod.glyph = null; Store.save(); };
+      r.readAsDataURL(f);
+    };
+    $('set-podicon-glyph').onclick = () => $('set-podglyphs').classList.toggle('hidden');
     $('set-remind').onchange = e => { Store.state.settings.remind = e.target.checked; Store.save(); };
     $('set-milestone').onchange = e => { Store.state.settings.milestone = e.target.checked; Store.save(); };
     $$('#set-theme .seg-btn').forEach(b => b.onclick = () => {

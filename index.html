@@ -139,7 +139,7 @@
         <div id="st-lockbanner" class="hidden"></div>
         <div id="st-table"></div>
         <p class="section-h">Recent</p>
-        <p class="muted" id="st-recent"></p>
+        <div id="st-recent"></div>
       </div>
       <button class="fab" id="fab-log">Log Game 1</button>
     </div>
@@ -177,6 +177,17 @@
     <div class="tabpane hidden" id="tab-settings">
       <div class="pad">
         <h2>Settings</h2>
+        <p class="section-h">Pod</p>
+        <input class="field" id="set-podname" maxlength="40" placeholder="Pod name">
+        <div class="swatches" id="set-podcolors" style="margin-top:12px"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn-secondary flex1" id="set-podicon-upload" style="padding:12px">Upload icon</button>
+          <button class="btn-secondary flex1" id="set-podicon-glyph" style="padding:12px">Pick glyph</button>
+          <input type="file" id="set-podicon-file" accept="image/*" class="hidden">
+        </div>
+        <div class="generic-grid hidden" id="set-podglyphs" style="margin-top:10px"></div>
+        <p class="section-h">Season</p>
+        <div id="set-season"></div>
         <p class="section-h">Notifications</p>
         <label class="row-toggle"><span>Game night reminders</span><input type="checkbox" id="set-remind"></label>
         <label class="row-toggle"><span>Standings milestones</span><input type="checkbox" id="set-milestone"></label>
@@ -210,7 +221,8 @@
       <button class="opt-row" id="log-optbtn"><span>+ Colors, decks, fun stats (optional)</span><span class="chev">›</span></button>
       <div id="log-opts" class="hidden"></div>
     </div>
-    <div class="bottom-cta"><button class="btn-primary btn-block" id="log-review">Review</button></div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="log-review">Review</button>
+      <button class="link-danger hidden" id="log-delete">Delete this game</button></div>
   </section>
 
   <!-- player picker sheet -->

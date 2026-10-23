@@ -77,6 +77,29 @@
       return game;
     },
 
+    updateGame(id, data) {
+      const s = this.activeSeason();
+      if (!s || s.status !== 'active') return null;
+      const i = s.games.findIndex(g => g.id === id);
+      if (i < 0) return null;
+      const keep = { id, number: s.games[i].number };
+      s.games[i] = Object.assign({}, s.games[i], data, keep);
+      this.save();
+      return s.games[i];
+    },
+
+    deleteGame(id) {
+      const s = this.activeSeason();
+      if (!s || s.status !== 'active') return false;
+      const i = s.games.findIndex(g => g.id === id);
+      if (i < 0) return false;
+      s.games.splice(i, 1);
+      // renumber
+      s.games.forEach((g, n) => { g.number = n + 1; });
+      this.save();
+      return true;
+    },
+
     // ---- season end ----
     seasonComplete(season) {
       if (season.type === 'games') return season.games.length >= (season.gameCount || 0);

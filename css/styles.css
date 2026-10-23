@@ -307,6 +307,18 @@ table.standings .rk { font-weight: 800; width: 30px; }
 /* settings */
 .about { text-align: center; margin: 30px 0 10px; font-size: 13px; }
 #set-roster .player-row { margin-top: 8px; }
+.recent-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: var(--card); border: none; border-radius: 12px; padding: 13px 14px; margin-top: 8px;
+  font-size: 14px; font-family: var(--font); color: var(--text); cursor: pointer; text-align: left;
+}
+.recent-row b { font-size: 15px; }
+.recent-row .chev { margin-left: auto; }
+.link-danger {
+  display: block; width: 100%; background: none; border: none; color: var(--red);
+  font-size: 15px; font-weight: 600; font-family: var(--font); cursor: pointer;
+  padding: 14px; margin-top: 4px;
+}
 
 @media (min-width: 500px) {
   body { padding: 24px 0; }
