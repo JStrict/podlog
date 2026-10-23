@@ -538,9 +538,24 @@
     const es = entriesByDate[calSel] || [];
     if (es.length) {
       pv.classList.remove('hidden');
-      pv.innerHTML = '<b>' + fmtDateLong(calSel) + '</b>' + es.map(e =>
-        '<div class="kv"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
-        (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '') + '</div>').join('');
+      pv.innerHTML = '<b>' + fmtDateLong(calSel) + '</b>';
+      es.forEach(e => {
+        const editable = e.id && e.type !== 'game' && e.type !== 'season';
+        if (!editable) {
+          const d = document.createElement('div');
+          d.className = 'kv';
+          d.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
+            (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '');
+          pv.appendChild(d);
+        } else {
+          const b = document.createElement('button');
+          b.className = 'entry-row';
+          b.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
+            (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '') + '<span class="chev">›</span>';
+          b.onclick = () => openEntryEdit(e.id);
+          pv.appendChild(b);
+        }
+      });
     } else pv.classList.add('hidden');
     // quick actions
     const q = $('cal-quicks'); q.innerHTML = '';
@@ -562,12 +577,18 @@
   function initCalendar() {
     $('cal-prev').onclick = () => { calM--; if (calM < 0) { calM = 11; calY--; } renderCalendar(); };
     $('cal-next').onclick = () => { calM++; if (calM > 11) { calM = 0; calY++; } renderCalendar(); };
-    $('cal-newbtn').onclick = () => {
-      $('entry-date').value = calSel;
-      swatchRow($('entry-colors'), Store.state.pod.color, () => {});
-      $('ov-entry').classList.remove('hidden');
-    };
+    $('cal-newbtn').onclick = () => openEntryNew();
     $('entry-cancel').onclick = () => $('ov-entry').classList.add('hidden');
+    $('entry-delete').onclick = () => {
+      if (!entryEditingId) return;
+      const e = Store.state.calendar.find(x => x.id === entryEditingId);
+      if (e && confirm('Delete "' + e.title + '"?')) {
+        Store.state.calendar = Store.state.calendar.filter(x => x.id !== entryEditingId);
+        Store.save();
+        $('ov-entry').classList.add('hidden');
+        renderCalendar();
+      }
+    };
     $$('#entry-types .chip').forEach(c => c.onclick = () => {
       $$('#entry-types .chip').forEach(x => x.classList.remove('active')); c.classList.add('active');
     });
@@ -576,24 +597,56 @@
       if (!title) { alert('Give the entry a title.'); return; }
       const activeChip = document.querySelector('#entry-types .chip.active');
       const type = activeChip ? activeChip.dataset.t : 'custom';
-      const colorBtn = document.querySelector('#entry-colors .sel');
-      const color = colorBtn ? rgbToHex(colorBtn.style.background) : Store.state.pod.color;
-      const entry = { id: uid(), date: $('entry-date').value || calSel, title, type, color, notes: $('entry-notes').value.trim() };
-      Store.state.calendar.push(entry);
-      if ($('entry-quick').checked) Store.state.quickActions.push({ id: uid(), title, type, color });
+      const color = entryColor || Store.state.pod.color;
+      const date = $('entry-date').value || calSel;
+      const notes = $('entry-notes').value.trim();
+      if (entryEditingId) {
+        const e = Store.state.calendar.find(x => x.id === entryEditingId);
+        if (e) { e.title = title; e.date = date; e.type = type; e.color = color; e.notes = notes; }
+      } else {
+        const entry = { id: uid(), date, title, type, color, notes };
+        Store.state.calendar.push(entry);
+        if ($('entry-quick').checked) Store.state.quickActions.push({ id: uid(), title, type, color });
+      }
       Store.save();
       $('ov-entry').classList.add('hidden');
-      $('entry-title').value = ''; $('entry-notes').value = ''; $('entry-quick').checked = false;
       renderCalendar();
     };
   }
-  function rgbToHex(rgb) {
-    const m = rgb.match(/\d+/g);
-    if (!m) return '#3E2FDC';
-    return '#' + m.slice(0, 3).map(n => parseInt(n, 10).toString(16).padStart(2, '0')).join('');
+  let entryEditingId = null;
+  let entryColor = null;
+
+  function openEntryNew() {
+    entryEditingId = null;
+    entryColor = Store.state.pod.color;
+    $('entry-h').textContent = 'Create new';
+    $('entry-title').value = '';
+    $('entry-date').value = calSel;
+    $('entry-notes').value = '';
+    $('entry-quick').checked = false;
+    $$('#entry-types .chip').forEach(x => x.classList.toggle('active', x.dataset.t === 'custom'));
+    swatchRow($('entry-colors'), entryColor, hex => { entryColor = hex; });
+    $('entry-delete').classList.add('hidden');
+    $('ov-entry').classList.remove('hidden');
   }
 
-  // ---------- PLAYER PROFILE ----------
+  function openEntryEdit(id) {
+    const e = Store.state.calendar.find(x => x.id === id);
+    if (!e) return;
+    entryEditingId = id;
+    entryColor = e.color;
+    $('entry-h').textContent = 'Edit entry';
+    $('entry-title').value = e.title;
+    $('entry-date').value = e.date;
+    $('entry-notes').value = e.notes || '';
+    $('entry-quick').checked = false;
+    $$('#entry-types .chip').forEach(x => x.classList.toggle('active', x.dataset.t === e.type));
+    swatchRow($('entry-colors'), entryColor, hex => { entryColor = hex; });
+    $('entry-delete').classList.remove('hidden');
+    $('ov-entry').classList.remove('hidden');
+  }
+
+  // ---------- PLAYER PROFILE ----------  // ---------- PLAYER PROFILE ----------
   function openProfile(pid) {
     const st = Store.state;
     const p = st.players.find(x => x.id === pid);
