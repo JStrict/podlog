@@ -517,7 +517,7 @@
     const entriesByDate = {};
     st.calendar.forEach(e => { (entriesByDate[e.date] = entriesByDate[e.date] || []).push(e); });
     (Store.activeSeason() || { games: [] }).games.forEach(g => {
-      (entriesByDate[g.date] = entriesByDate[g.date] || []).push({ title: 'Game ' + g.number + ' · ' + playerName(g.placements[0]) + ' 1st', type: 'game', color: st.pod.color });
+      (entriesByDate[g.date] = entriesByDate[g.date] || []).push({ title: 'Game ' + g.number + ' · ' + playerName(g.placements[0]) + ' 1st', type: 'game', color: st.pod.color, gameId: g.id });
     });
     for (let i = 0; i < first; i++) { const b = document.createElement('button'); b.className = 'dim'; b.disabled = true; grid.appendChild(b); }
     for (let d = 1; d <= days; d++) {
@@ -540,20 +540,25 @@
       pv.classList.remove('hidden');
       pv.innerHTML = '<b>' + fmtDateLong(calSel) + '</b>';
       es.forEach(e => {
-        const editable = e.id && e.type !== 'game' && e.type !== 'season';
-        if (!editable) {
-          const d = document.createElement('div');
-          d.className = 'kv';
-          d.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
-            (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '');
-          pv.appendChild(d);
-        } else {
+        if (e.type === 'game') {
+          const b = document.createElement('button');
+          b.className = 'entry-row';
+          b.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) + '<span class="chev">›</span>';
+          b.onclick = () => openLog(e.gameId);
+          pv.appendChild(b);
+        } else if (e.id && e.type !== 'season') {
           const b = document.createElement('button');
           b.className = 'entry-row';
           b.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
             (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '') + '<span class="chev">›</span>';
           b.onclick = () => openEntryEdit(e.id);
           pv.appendChild(b);
+        } else {
+          const d = document.createElement('div');
+          d.className = 'kv';
+          d.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + esc(e.color || '#3E2FDC') + '"></span> ' + esc(e.title) +
+            (e.notes ? '<br><span class="muted">' + esc(e.notes) + '</span>' : '');
+          pv.appendChild(d);
         }
       });
     } else pv.classList.add('hidden');
