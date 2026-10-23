@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PodLog</title>
+<meta name="description" content="Run your pod like a league. The official record for your Commander pod.">
+<meta name="theme-color" content="#3E2FDC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PodLog">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ FIRST LAUNCH ============ -->
+  <section class="screen" id="s-first">
+    <div class="first-wrap">
+      <img class="first-quill" src="assets/quill.jpg" alt="PodLog quill mark">
+      <img class="first-wordmark" src="assets/wordmark.jpg" alt="PODLOG">
+      <p class="tagline">Run your <span class="pod-blue">pod</span> like a league.</p>
+      <p class="subline">The official record for your Commander pod.</p>
+      <button class="btn-primary btn-block" id="btn-create-pod">Create a Pod</button>
+    </div>
+  </section>
+
+  <!-- ============ CREATE STEP 1 ============ -->
+  <section class="screen hidden" id="s-c1">
+    <header class="nav"><button class="nav-back" data-go="s-first">‹</button></header>
+    <h1 class="title-center">New Pod</h1>
+    <p class="step-label">Step 1 of 4</p>
+    <div class="pad">
+      <p class="section-h">Pod name</p>
+      <input class="field" id="c1-name" placeholder="e.g. The Forge" maxlength="40">
+      <p class="section-h">Icon</p>
+      <div class="icon-pick">
+        <button class="icon-opt" id="c1-upload">
+          <span class="icon-plus">+</span>
+          <span class="icon-cap">Upload photo</span>
+        </button>
+        <button class="icon-opt" id="c1-generic">
+          <span class="icon-glyphs"><i>◆</i><i>●</i><i>▲</i><i>■</i></span>
+          <span class="icon-cap">Pick a generic icon</span>
+        </button>
+        <input type="file" id="c1-file" accept="image/*" class="hidden">
+      </div>
+      <div class="generic-grid hidden" id="c1-glyphs"></div>
+      <p class="section-h">Pod color</p>
+      <div class="swatches" id="c1-colors"></div>
+      <p class="hint">Blue is the brand default. The pod color drives tabs and accents.</p>
+    </div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="c1-continue">Continue</button></div>
+  </section>
+
+  <!-- ============ CREATE STEP 2 ============ -->
+  <section class="screen hidden" id="s-c2">
+    <header class="nav"><button class="nav-back" data-go="s-c1">‹</button></header>
+    <h1 class="title-center">Roster</h1>
+    <p class="step-label">Step 2 of 4</p>
+    <div class="pad">
+      <p class="section-h">Players</p>
+      <div class="stepper-row">
+        <button class="stepper-btn" id="c2-minus">−</button>
+        <div class="stepper-count" id="c2-count">6</div>
+        <button class="stepper-btn primary" id="c2-plus">+</button>
+        <span class="stepper-note">players (4–8)</span>
+      </div>
+      <p class="min-warn hidden" id="c2-warn">A pod needs at least 4 players.</p>
+      <div id="c2-rows"></div>
+      <p class="hint">Tap a circle to add a photo. Names can be edited later in Settings.</p>
+    </div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="c2-continue">Continue</button></div>
+  </section>
+
+  <!-- ============ CREATE STEP 3 ============ -->
+  <section class="screen hidden" id="s-c3">
+    <header class="nav"><button class="nav-back" data-go="s-c2">‹</button></header>
+    <h1 class="title-center">Season 1</h1>
+    <p class="step-label">Step 3 of 4</p>
+    <div class="pad">
+      <p class="section-h">Season name</p>
+      <input class="field" id="c3-name" value="Season 1" maxlength="40">
+      <p class="section-h">Season length</p>
+      <div class="seg">
+        <button class="seg-btn active" data-len="games">Game count</button>
+        <button class="seg-btn" data-len="dates">Date range</button>
+      </div>
+      <div id="c3-games-wrap"><input class="field" id="c3-games" type="number" min="1" max="500" value="20"></div>
+      <div id="c3-dates-wrap" class="hidden">
+        <input class="field" id="c3-start" type="date">
+        <input class="field mt" id="c3-end" type="date">
+      </div>
+      <div class="info-card">
+        <p class="info-title">Qualifying and winning work the same every season:</p>
+        <p class="info-body">• Play 50% of games to be ranked<br>• Standings sort by win %, ties break on placement points</p>
+      </div>
+    </div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="c3-continue">Continue</button></div>
+  </section>
+
+  <!-- ============ CREATE STEP 4 ============ -->
+  <section class="screen hidden" id="s-c4">
+    <header class="nav"><button class="nav-back" data-go="s-c3">‹</button></header>
+    <h1 class="title-center">Review</h1>
+    <p class="step-label">Step 4 of 4</p>
+    <div class="pad">
+      <div class="card" id="c4-card"></div>
+      <p class="section-h">Players</p>
+      <p class="review-players" id="c4-players"></p>
+      <p class="section-h">Season</p>
+      <div id="c4-season"></div>
+    </div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="c4-start">Start Season 1</button></div>
+  </section>
+
+  <!-- ============ MAIN (TABS) ============ -->
+  <section class="screen hidden" id="s-main">
+    <nav class="folder-tabs" id="folder-tabs">
+      <button data-tab="standings" class="active">Standings</button>
+      <button data-tab="hof">HOF</button>
+      <button data-tab="calendar">Calendar</button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+
+    <div class="tabpane" id="tab-standings">
+      <div class="pad">
+        <div class="pod-head">
+          <div class="pod-icon" id="st-podicon">F</div>
+          <div><h2 id="st-podname">Pod</h2><p class="muted" id="st-seasonline"></p></div>
+          <button class="share-btn" id="share-standings" aria-label="Share standings">↑</button>
+        </div>
+        <div class="progress"><div class="progress-fill" id="st-progress"></div></div>
+        <p class="muted" id="st-progresstext"></p>
+        <div id="st-lockbanner" class="hidden"></div>
+        <div id="st-table"></div>
+        <p class="section-h">Recent</p>
+        <p class="muted" id="st-recent"></p>
+      </div>
+      <button class="fab" id="fab-log">Log Game 1</button>
+    </div>
+
+    <div class="tabpane hidden" id="tab-hof">
+      <div class="pad">
+        <div class="pod-head">
+          <div><h2>Hall of Fame</h2><p class="muted" id="hof-sub">Career records</p></div>
+          <button class="share-btn" id="share-hof" aria-label="Share Hall of Fame">↑</button>
+        </div>
+        <div id="hof-list"></div>
+      </div>
+    </div>
+
+    <div class="tabpane hidden" id="tab-calendar">
+      <div class="pad">
+        <div class="pod-head">
+          <div><h2 id="cal-title">Calendar</h2></div>
+          <button class="share-btn" id="share-cal" aria-label="Share calendar">↑</button>
+        </div>
+        <div class="cal-head">
+          <button id="cal-prev">‹</button><h3 id="cal-month"></h3><button id="cal-next">›</button>
+        </div>
+        <div class="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="card hidden" id="cal-preview"></div>
+      </div>
+      <div class="quickbar">
+        <button class="btn-primary flex1" id="cal-logbtn">Log Game 1</button>
+        <button class="btn-secondary flex1" id="cal-newbtn">+ Create new</button>
+        <div id="cal-quicks"></div>
+      </div>
+    </div>
+
+    <div class="tabpane hidden" id="tab-settings">
+      <div class="pad">
+        <h2>Settings</h2>
+        <p class="section-h">Notifications</p>
+        <label class="row-toggle"><span>Game night reminders</span><input type="checkbox" id="set-remind"></label>
+        <label class="row-toggle"><span>Standings milestones</span><input type="checkbox" id="set-milestone"></label>
+        <p class="section-h">Appearance</p>
+        <div class="seg" id="set-theme">
+          <button class="seg-btn" data-theme="light">Light</button>
+          <button class="seg-btn" data-theme="dark">Dark</button>
+          <button class="seg-btn" data-theme="system">System</button>
+        </div>
+        <p class="section-h">Data</p>
+        <button class="btn-secondary btn-block" id="set-export">Export data (2 CSVs)</button>
+        <button class="btn-secondary btn-block mt" id="set-backup">Backup (JSON)</button>
+        <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
+        <input type="file" id="set-restore-file" accept="application/json" class="hidden">
+        <p class="section-h">Roster</p>
+        <div id="set-roster"></div>
+        <p class="about muted" id="set-about">PodLog · v1.0 · © 2026</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOG GAME ============ -->
+  <section class="screen hidden" id="s-log">
+    <header class="nav"><button class="nav-back" data-go="s-main">‹</button></header>
+    <h1 class="title-center" id="log-title">Log Game 1</h1>
+    <div class="pad">
+      <button class="date-row" id="log-datebtn"><span id="log-date">Today</span><span class="chev">›</span></button>
+      <input type="date" id="log-dateinput" class="hidden">
+      <p class="section-h">Placement — tap to assign</p>
+      <div id="log-slots"></div>
+      <button class="opt-row" id="log-optbtn"><span>+ Colors, decks, fun stats (optional)</span><span class="chev">›</span></button>
+      <div id="log-opts" class="hidden"></div>
+    </div>
+    <div class="bottom-cta"><button class="btn-primary btn-block" id="log-review">Review</button></div>
+  </section>
+
+  <!-- player picker sheet -->
+  <div class="sheet-back hidden" id="picker-back">
+    <div class="sheet">
+      <h3 id="picker-title">Who placed 1st?</h3>
+      <div id="picker-list"></div>
+      <button class="btn-secondary btn-block" id="picker-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ CONFIRM ============ -->
+  <section class="screen hidden" id="s-confirm">
+    <header class="nav"><button class="nav-back" data-go="s-log">‹</button></header>
+    <h1 class="title-center" id="confirm-title">Confirm Game 1</h1>
+    <p class="step-label" id="confirm-sub"></p>
+    <div class="pad">
+      <p class="section-h">Placement</p>
+      <div id="confirm-slots"></div>
+      <p class="section-h">Standings impact</p>
+      <div class="card" id="confirm-impact"></div>
+      <p class="hint">Preview only — nothing is saved until you confirm.</p>
+    </div>
+    <div class="bottom-cta dual">
+      <button class="btn-secondary flex1" id="confirm-edit">Edit</button>
+      <button class="btn-primary flex1" id="confirm-yes">Confirm</button>
+    </div>
+  </section>
+
+  <!-- ============ SEASON END ============ -->
+  <section class="screen hidden" id="s-end">
+    <div class="pad">
+      <h1 class="title-center" id="end-title">Season 1</h1>
+      <p class="final-badge">FINAL</p>
+      <div class="champ-card">
+        <div class="crown">♛</div>
+        <p class="card-kicker">Season Champion</p>
+        <h2 id="end-champ">—</h2>
+        <p class="muted" id="end-champ-line"></p>
+      </div>
+      <div class="spoon-card">
+        <p class="card-kicker">Wooden Spoon</p>
+        <h3 id="end-spoon">—</h3>
+        <p class="muted">Better luck next season.</p>
+      </div>
+      <p class="section-h">Final table</p>
+      <div id="end-table"></div>
+    </div>
+    <div class="bottom-cta dual">
+      <button class="btn-primary flex1" id="end-share">Share</button>
+      <button class="btn-secondary flex1" id="end-exit">Exit</button>
+    </div>
+  </section>
+
+  <!-- ============ PLAYER PROFILE OVERLAY ============ -->
+  <div class="overlay hidden" id="ov-player">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="profile-head">
+        <div class="avatar-lg" id="pp-avatar">J</div>
+        <div><h2 id="pp-name">Player</h2><p class="muted" id="pp-nick"></p></div>
+      </div>
+      <p class="section-h" id="pp-season-h">Season</p>
+      <div class="stat-grid" id="pp-season"></div>
+      <p class="section-h">All-time</p>
+      <div id="pp-career"></div>
+      <p class="section-h">Fun stats</p>
+      <div id="pp-fun"></div>
+      <button class="btn-secondary btn-block mt" id="pp-close">Close</button>
+    </div>
+  </div>
+
+  <!-- ============ CREATE-NEW SHEET (calendar) ============ -->
+  <div class="overlay hidden" id="ov-entry">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Create new</h3>
+      <input class="field" id="entry-title" placeholder="Title" maxlength="60">
+      <input class="field mt" id="entry-date" type="date">
+      <p class="section-h">Type</p>
+      <div class="chips" id="entry-types">
+        <button class="chip" data-t="set release">Set release</button>
+        <button class="chip" data-t="prerelease">Prerelease</button>
+        <button class="chip" data-t="draft">Draft</button>
+        <button class="chip" data-t="game night">Game night</button>
+        <button class="chip active" data-t="custom">Custom</button>
+      </div>
+      <p class="section-h">Color</p>
+      <div class="swatches small" id="entry-colors"></div>
+      <input class="field mt" id="entry-notes" placeholder="Notes (optional)" maxlength="140">
+      <label class="row-toggle"><span>Save as quick action</span><input type="checkbox" id="entry-quick"></label>
+      <div class="bottom-cta dual mt">
+        <button class="btn-secondary flex1" id="entry-cancel">Cancel</button>
+        <button class="btn-primary flex1" id="entry-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="js/scoring.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
