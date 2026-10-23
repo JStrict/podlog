@@ -261,7 +261,7 @@
       fab.onclick = () => { Store.startNextSeason(); enterMain('standings'); };
     } else {
       fab.textContent = 'Log Game ' + (season.games.length + 1);
-      fab.onclick = openLog;
+      fab.onclick = () => openLog();
     }
     $('cal-logbtn').textContent = locked ? 'Season locked' : 'Log Game ' + (season.games.length + 1);
 
@@ -305,6 +305,7 @@
   const MANA = ['W', 'U', 'B', 'R', 'G', 'C'];
 
   function openLog(editId) {
+    if (editId && typeof editId !== 'string') editId = null;
     const st = Store.state;
     const season = Store.activeSeason();
     if (!season || season.status !== 'active') return;
