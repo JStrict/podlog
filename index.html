@@ -204,7 +204,7 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Backup (JSON)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.3 · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · v1.4 · © 2026</p>
       </div>
     </div>
   </section>
@@ -214,8 +214,10 @@
     <header class="nav"><button class="nav-back" data-go="s-main">‹</button></header>
     <h1 class="title-center" id="log-title">Log Game 1</h1>
     <div class="pad">
-      <button class="date-row" id="log-datebtn"><span id="log-date">Today</span><span class="chev">›</span></button>
-      <input type="date" id="log-dateinput" class="hidden">
+      <div class="date-row-wrap">
+        <button class="date-row" id="log-datebtn"><span id="log-date">Today</span><span class="chev">›</span></button>
+        <input type="date" id="log-dateinput" aria-label="Game date">
+      </div>
       <p class="section-h">Placement — tap to assign</p>
       <div id="log-slots"></div>
       <button class="opt-row" id="log-optbtn"><span>+ Colors, decks, fun stats (optional)</span><span class="chev">›</span></button>

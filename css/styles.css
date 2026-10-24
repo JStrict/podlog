@@ -200,6 +200,11 @@ table.standings .rk { font-weight: 800; width: 30px; }
   font-size: 15px; font-weight: 600; font-family: var(--font); color: var(--text); cursor: pointer;
 }
 .chev { color: var(--blue); font-size: 20px; }
+.date-row-wrap { position: relative; }
+#log-dateinput {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; font-size: 16px;
+}
 .slot {
   display: flex; align-items: center; gap: 12px; width: 100%; background: var(--bg);
   border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 12px; margin-top: 10px;

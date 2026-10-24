@@ -332,6 +332,7 @@
       $('log-review').textContent = 'Review';
     }
     $('log-date').textContent = fmtDateLong(logDraft.date);
+    $('log-dateinput').value = logDraft.date;
     $('log-opts').classList.add('hidden');
     $('log-delete').classList.toggle('hidden', !editId);
     renderLogSlots();
@@ -412,7 +413,6 @@
   function initLog() {
     $('picker-cancel').onclick = () => $('picker-back').classList.add('hidden');
     $('picker-back').onclick = e => { if (e.target.id === 'picker-back') $('picker-back').classList.add('hidden'); };
-    $('log-datebtn').onclick = () => $('log-dateinput').click();
     $('log-dateinput').onchange = e => {
       if (e.target.value) { logDraft.date = e.target.value; $('log-date').textContent = fmtDateLong(logDraft.date); }
     };
