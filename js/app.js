@@ -604,9 +604,15 @@
       if (iso === todayISO()) b.classList.add('today');
       if (iso === calSel) b.classList.add('sel');
       const es = entriesByDate[iso] || [];
-      if (es.length && iso !== todayISO()) { const dot = document.createElement('span'); dot.className = 'dot'; b.appendChild(dot); }
-      const se = es.find(e => e.type === 'season');
-      if (se) { const m = document.createElement('span'); m.className = 'marker'; m.style.background = se.color; b.appendChild(m); }
+      if (es.length) {
+        const dots = document.createElement('span'); dots.className = 'dots';
+        es.slice(0, 3).forEach(e => {
+          const d = document.createElement('i');
+          d.style.background = e.color || st.pod.color;
+          dots.appendChild(d);
+        });
+        b.appendChild(dots);
+      }
       b.onclick = () => { calSel = iso; renderCalendar(); };
       grid.appendChild(b);
     }
