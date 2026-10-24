@@ -1,5 +1,5 @@
 /* PodLog service worker — offline-first app shell */
-const CACHE = 'podlog-v8';
+const CACHE = 'podlog-v9';
 const ASSETS = [
   './', './index.html',
   './css/styles.css',
@@ -24,7 +24,7 @@ self.addEventListener('fetch', e => {
     p.endsWith('.js') || p.endsWith('.css') || p.endsWith('.html') ||
     p.endsWith('/podlog/') || p.endsWith('/podlog');
   if (isShell) {
-    e.respondWith(fetch(e.request).then(res => {
+    e.respondWith(fetch(e.request, { cache: 'reload' }).then(res => {
       if (res.ok) {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
