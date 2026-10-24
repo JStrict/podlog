@@ -337,7 +337,7 @@
   }
 
   // ---------- LOG GAME ----------
-  const logDraft = { count: 0, players: [], slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elims: {} };
+  const logDraft = { count: 0, players: [], slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elimBy: {} };
   const MANA = ['W', 'U', 'B', 'R', 'G', 'C'];
 
   function openLog(editId) {
@@ -357,7 +357,7 @@
       logDraft.turns = g.turns || '';
       logDraft.colors = Object.assign({}, g.colors);
       logDraft.decks = Object.assign({}, g.decks);
-      logDraft.elims = Object.assign({}, g.eliminations);
+      logDraft.elimBy = Object.assign({}, g.eliminatedBy);
       $('log-title').textContent = 'Edit Game ' + g.number;
       $('log-review').textContent = 'Review changes';
     } else {
@@ -365,7 +365,7 @@
       logDraft.count = logDraft.players.length;
       logDraft.slots = new Array(logDraft.count).fill(null);
       logDraft.date = todayISO();
-      logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elims = {};
+      logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elimBy = {};
       $('log-title').textContent = 'Log Game ' + (season.games.length + 1);
       $('log-review').textContent = 'Review';
     }
@@ -400,7 +400,8 @@
       logDraft.slots = logDraft.slots.filter(id => id !== pid);
       if (logDraft.slots.length > logDraft.players.length) logDraft.slots.length = logDraft.players.length;
       while (logDraft.slots.length < logDraft.players.length) logDraft.slots.push(null);
-      delete logDraft.colors[pid]; delete logDraft.decks[pid]; delete logDraft.elims[pid];
+      delete logDraft.colors[pid]; delete logDraft.decks[pid]; delete logDraft.elimBy[pid];
+      Object.keys(logDraft.elimBy).forEach(v => { if (logDraft.elimBy[v] === pid) delete logDraft.elimBy[v]; });
       if (logDraft.firstBlood === pid) logDraft.firstBlood = '';
     } else {
       logDraft.players.push(pid);
@@ -458,11 +459,14 @@
       const cols = logDraft.colors[id] || [];
       html += '<div style="margin-top:10px"><b>' + esc(playerName(id)) + '</b><div class="mana-row" data-mana="' + id + '">' +
         MANA.map(m => '<button class="mana' + (cols.includes(m) ? ' on' : '') + '" data-m="' + m + '">' + m + '</button>').join('') + '</div>' +
-        '<input class="field mt" data-deck="' + id + '" placeholder="Deck nickname (optional)" style="padding:10px 12px;font-size:14px" value="' + esc(logDraft.decks[id] || '') + '">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="muted" style="font-size:13px">Eliminations</span>' +
-        '<button class="stepper-btn" data-el="-1" data-p="' + id + '" style="width:34px;height:34px;font-size:18px">−</button>' +
-        '<span data-elv="' + id + '">' + (logDraft.elims[id] || 0) + '</span>' +
-        '<button class="stepper-btn" data-el="1" data-p="' + id + '" style="width:34px;height:34px;font-size:18px">+</button></div></div>';
+        '<input class="field mt" data-deck="' + id + '" placeholder="Deck nickname (optional)" style="padding:10px 12px;font-size:14px" value="' + esc(logDraft.decks[id] || '') + '"></div>';
+    });
+    html += '<p class="section-h">Eliminated by</p>';
+    assigned.forEach(id => {
+      if (logDraft.slots[0] === id) return; // winner was not eliminated
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="muted" style="font-size:13px;flex:1">' + esc(playerName(id)) + '</span>' +
+        '<select class="field" data-elimby="' + id + '" style="flex:2;padding:10px 12px;font-size:14px"><option value="">—</option>' +
+        assigned.filter(x => x !== id).map(x => '<option value="' + x + '"' + (logDraft.elimBy[id] === x ? ' selected' : '') + '>' + esc(playerName(x)) + '</option>').join('') + '</select></div>';
     });
     wrap.innerHTML = html;
     const fbSel = wrap.querySelector('#opt-fb');
@@ -477,10 +481,9 @@
       b.classList.toggle('on');
     });
     $$('#log-opts [data-deck]').forEach(i => { clearable(i); i.oninput = () => { logDraft.decks[i.dataset.deck] = i.value; }; });
-    $$('#log-opts [data-el]').forEach(b => b.onclick = () => {
-      const pid = b.dataset.p;
-      logDraft.elims[pid] = Math.max(0, (logDraft.elims[pid] || 0) + parseInt(b.dataset.el, 10));
-      wrap.querySelector('[data-elv="' + pid + '"]').textContent = logDraft.elims[pid];
+    $$('#log-opts [data-elimby]').forEach(sel => sel.onchange = () => {
+      if (sel.value) logDraft.elimBy[sel.dataset.elimby] = sel.value;
+      else delete logDraft.elimBy[sel.dataset.elimby];
     });
   }
 
@@ -518,14 +521,26 @@
     $('confirm-slots').innerHTML = logDraft.slots.map((pid, i) =>
       '<div class="kv"><span class="muted">' + ord[i] + '</span> &nbsp;<b>' + esc(playerName(pid)) + '</b></div>').join('');
 
+    // named elimination credit: victim -> killer, sanitized to real placements
+    const elimBy = {};
+    logDraft.slots.forEach((pid, i) => {
+      if (i === 0) return; // winner was not eliminated
+      const k = logDraft.elimBy[pid];
+      if (k && k !== pid && logDraft.slots.includes(k)) elimBy[pid] = k;
+    });
     const game = {
       date: logDraft.date, placements: logDraft.slots.slice(),
       firstBlood: logDraft.firstBlood || null,
       turns: parseInt(logDraft.turns, 10) || null,
       colors: Object.assign({}, logDraft.colors),
       decks: Object.assign({}, logDraft.decks),
-      eliminations: Object.assign({}, logDraft.elims),
+      eliminatedBy: elimBy,
     };
+    // editing a legacy count-only game without touching eliminators: keep its counts
+    if (editing && !Object.keys(elimBy).length) {
+      const orig = season.games.find(g => g.id === logDraft.editingId);
+      if (orig && orig.eliminations) game.eliminations = Object.assign({}, orig.eliminations);
+    }
     const base = editing ? season.games.filter(g => g.id !== logDraft.editingId) : season.games;
     const pv = S.previewImpact(st.players, base, game);
     $('confirm-impact').innerHTML = pv.moves.map(m => {
@@ -757,6 +772,14 @@
     $('pp-career').innerHTML = '<p class="kv">Career <b>' + S.fmtWL(c) + '</b> · ' + S.fmtPct(c.winPct) + '</p>' +
       '<p class="kv">Championships <b>' + chips + '</b></p>';
     $('pp-fun').innerHTML = '<p class="kv">First bloods <b>' + c.firstBloods + '</b> · Eliminations <b>' + c.eliminations + '</b></p>';
+    const vs = S.eliminationVs(pid, all);
+    const vsLine = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1])
+      .map(([id, n]) => esc(playerName(id)) + ' ' + n).join(' · ');
+    const elimVs = vsLine(vs.eliminated), elimBy = vsLine(vs.eliminatedBy);
+    if (elimVs || elimBy) {
+      $('pp-fun').innerHTML += (elimVs ? '<p class="kv">Eliminated <b>' + elimVs + '</b></p>' : '') +
+        (elimBy ? '<p class="kv">Eliminated by <b>' + elimBy + '</b></p>' : '');
+    }
     $('ov-player').classList.remove('hidden');
   }
 

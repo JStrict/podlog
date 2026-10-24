@@ -15,8 +15,36 @@
 
   // game = { id, number, date, placements: [playerId...] in finish order,
   //          ties: [[playerIds]] optional groups sharing a position,
-  //          firstBlood: playerId?, eliminations: {playerId: n}? }
+  //          firstBlood: playerId?, eliminatedBy: {victimId: killerId}?,
+  //          eliminations: {playerId: n}? (legacy count-only games) }
   // placements lists every player in the game, first element = 1st place.
+  // Eliminations are cosmetic only: they never touch standings. Named credit
+  // (eliminatedBy) is the source of truth; the count is derived from it so
+  // legacy count-only games keep working.
+
+  // { playerId: count } of eliminations credited in one game.
+  function eliminationCounts(game) {
+    const counts = {};
+    if (game.eliminatedBy) {
+      Object.values(game.eliminatedBy).forEach(id => { if (id) counts[id] = (counts[id] || 0) + 1; });
+      if (Object.keys(counts).length) return counts;
+    }
+    return Object.assign({}, game.eliminations || {});
+  }
+
+  // Rivalry view for one player across games:
+  // { eliminated: {otherId: n}, eliminatedBy: {otherId: n} }
+  function eliminationVs(playerId, games) {
+    const eliminated = {}, eliminatedBy = {};
+    games.forEach(g => {
+      Object.entries(g.eliminatedBy || {}).forEach(([victim, killer]) => {
+        if (!killer) return;
+        if (killer === playerId) eliminated[victim] = (eliminated[victim] || 0) + 1;
+        if (victim === playerId) eliminatedBy[killer] = (eliminatedBy[killer] || 0) + 1;
+      });
+    });
+    return { eliminated, eliminatedBy };
+  }
 
   function placementPoints(game) {
     // returns { playerId: points }
@@ -67,7 +95,8 @@
       s.best = s.best === null ? pos : Math.min(s.best, pos);
       s.worst = s.worst === null ? pos : Math.max(s.worst, pos);
       if (g.firstBlood === playerId) s.firstBloods++;
-      if (g.eliminations && g.eliminations[playerId]) s.eliminations += g.eliminations[playerId];
+      const ec = eliminationCounts(g);
+      if (ec[playerId]) s.eliminations += ec[playerId];
       const won = gameWinner(g) === playerId;
       if (won) {
         s.wins++;
@@ -168,10 +197,10 @@
     }));
     const winTop = Object.entries(wins).sort((a, b) => b[1] - a[1])[0];
     if (winTop) rows.push({ label: 'Most total wins', name: name(winTop[0]), value: String(winTop[1]) });
-    // eliminations
+    // eliminations (named credit or legacy counts)
     const elims = {};
     locked.forEach(s => s.games.forEach(g => {
-      Object.entries(g.eliminations || {}).forEach(([id, n]) => { elims[id] = (elims[id] || 0) + n; });
+      Object.entries(eliminationCounts(g)).forEach(([id, n]) => { elims[id] = (elims[id] || 0) + n; });
     }));
     const elimTop = Object.entries(elims).sort((a, b) => b[1] - a[1])[0];
     if (elimTop) rows.push({ label: 'Most eliminations', name: name(elimTop[0]), value: String(elimTop[1]) });
@@ -220,7 +249,7 @@
     return { rows, seasons: locked.length };
   }
 
-  const api = { placementPoints, gameWinner, playerStats, headToHead, computeStandings, previewImpact, hallOfFame, fmtPct, fmtWL };
+  const api = { placementPoints, gameWinner, playerStats, headToHead, computeStandings, previewImpact, hallOfFame, fmtPct, fmtWL, eliminationCounts, eliminationVs };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PodLogScoring = api;
 })(typeof self !== 'undefined' ? self : this);
