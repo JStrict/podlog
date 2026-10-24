@@ -44,11 +44,40 @@
         const raw = localStorage.getItem(KEY);
         if (raw) {
           const s = JSON.parse(raw);
-          if (s && s.v === 1) { this.state = s; return true; }
+          if (s && s.v === 1) { this.state = s; this.reconcileBegins(); return true; }
         }
       } catch (e) { /* corrupted or unavailable — start fresh */ }
       this.state = blankState();
       return false;
+    },
+
+    // Self-healing: game-count seasons get exactly one "begins" marker,
+    // dated to the earliest logged game (or none if no games yet).
+    reconcileBegins() {
+      const st = this.state;
+      let changed = false;
+      (st.seasons || []).forEach(s => {
+        if (s.type !== 'games' || s.status !== 'active') return;
+        const begins = st.calendar.filter(e => e.type === 'season' && e.title === s.name + ' begins');
+        if (!s.games.length) {
+          if (begins.length) {
+            begins.forEach(e => st.calendar.splice(st.calendar.indexOf(e), 1));
+            changed = true;
+          }
+          return;
+        }
+        const first = s.games.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)[0];
+        const ok = begins.length === 1 && begins[0].date === first.date && begins[0].color === st.pod.color;
+        if (ok) return;
+        begins.forEach((e, i) => { if (i > 0) st.calendar.splice(st.calendar.indexOf(e), 1); });
+        if (begins.length) {
+          begins[0].date = first.date; begins[0].color = st.pod.color;
+        } else {
+          st.calendar.push({ id: uid(), date: first.date, title: s.name + ' begins', type: 'season', color: st.pod.color });
+        }
+        changed = true;
+      });
+      if (changed) this.save();
     },
 
     save() {
@@ -96,6 +125,7 @@
       s.games.splice(i, 1);
       // renumber
       s.games.forEach((g, n) => { g.number = n + 1; });
+      this.reconcileBegins();
       this.save();
       return true;
     },

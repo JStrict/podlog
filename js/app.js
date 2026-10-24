@@ -543,9 +543,10 @@
         return;
       }
       const saved = Store.logGame(game);
-      // game-count seasons: stamp "begins" on first game
+      // game-count seasons: stamp "begins" on first game (guarded — reconcileBegins is the source of truth)
       if (season.type === 'games' && season.games.length === 1) {
-        st.calendar.push({ id: uid(), date: game.date, title: season.name + ' begins', type: 'season', color: st.pod.color });
+        const hasBegins = st.calendar.some(e => e.type === 'season' && e.title === season.name + ' begins');
+        if (!hasBegins) st.calendar.push({ id: uid(), date: game.date, title: season.name + ' begins', type: 'season', color: st.pod.color });
         Store.save();
       }
       if (Store.seasonComplete(season)) {
