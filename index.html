@@ -140,6 +140,7 @@
         <div id="st-table"></div>
         <p class="section-h">Recent</p>
         <div id="st-recent"></div>
+        <button class="btn-secondary btn-block mt hidden" id="st-allgames">View all games</button>
       </div>
       <button class="fab" id="fab-log">Log Game 1</button>
     </div>
@@ -204,9 +205,16 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Share backup (save to Files)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.14 · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · v1.15 · © 2026</p>
       </div>
     </div>
+  </section>
+
+  <!-- ============ GAMES LEDGER ============ -->
+  <section class="screen hidden" id="s-games">
+    <header class="nav"><button class="nav-back" data-go="s-main">‹</button></header>
+    <h1 class="title-center" id="games-title">Games</h1>
+    <div class="pad"><div id="games-list"></div></div>
   </section>
 
   <!-- ============ LOG GAME ============ -->

@@ -304,8 +304,10 @@
     if (!season.games.length) {
       $('st-table').innerHTML = '<div class="empty-box"><h3>No games logged yet</h3><p class="muted">Log your first game to start the season. Ten seconds, done.</p></div>';
       $('st-recent').textContent = '—';
+      $('st-allgames').classList.add('hidden');
       return;
     }
+    $('st-allgames').classList.remove('hidden');
 
     let html = '<table class="standings"><tr><th>Rk</th><th>Player</th><th class="num">W–L</th><th class="num">Win%</th><th class="num">Pts</th><th class="num">Stk</th></tr>';
     table.ranked.forEach((p, i) => {
@@ -333,6 +335,30 @@
       b.innerHTML = '<b>G' + g.number + '</b><span class="muted">' + fmtDate(g.date) + '</span><span>' + esc(playerName(g.placements[0])) + ' 1st</span><span class="chev">›</span>';
       b.onclick = () => openLog(g.id);
       $('st-recent').appendChild(b);
+    });
+  }
+
+  // ---------- GAMES LEDGER ----------
+  function renderGames() {
+    const st = Store.state; const season = Store.activeSeason();
+    const wrap = $('games-list');
+    $('games-title').textContent = season ? season.name + ' · Games' : 'Games';
+    if (!season || !season.games.length) {
+      wrap.innerHTML = '<div class="empty-box"><h3>No games logged yet</h3><p class="muted">Games you log will live here as the season ledger.</p></div>';
+      return;
+    }
+    const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+    wrap.innerHTML = '';
+    season.games.slice().reverse().forEach(g => {
+      const row = document.createElement('div'); row.className = 'game-row';
+      const places = g.placements.map((pid, i) => ord[i] + ' ' + esc(playerName(pid)) +
+        (g.decks && g.decks[pid] ? ' (' + esc(g.decks[pid]) + ')' : '')).join(' · ');
+      row.innerHTML = '<div class="game-main"><div class="game-title">Game ' + g.number +
+        ' <span class="muted">· ' + fmtDate(g.date) + '</span></div><div class="game-places">' + places + '</div></div>' +
+        '<button class="share-btn" aria-label="Share game">↑</button>';
+      row.querySelector('.game-main').onclick = () => openLog(g.id);
+      row.querySelector('.share-btn').onclick = () => shareGame(g);
+      wrap.appendChild(row);
     });
   }
 
@@ -986,6 +1012,23 @@
     drawCard(season.name + ' · FINAL', st.pod.name, [['♛', 'Champion: ' + champ], ['🥄', 'Wooden spoon: ' + spoon]])
       .then(b => shareImage(b, 'podlog-champion.png', text));
   }
+  function shareGame(g) {
+    const st = Store.state; const season = Store.activeSeason(); if (!season) return;
+    const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+    const cardLabel = (pid) => {
+      let s = playerName(pid) + (g.decks && g.decks[pid] ? ' (' + g.decks[pid] + ')' : '');
+      return s.length > 30 ? s.slice(0, 29) + '…' : s;
+    };
+    const rows = g.placements.map((pid, i) => [ord[i], cardLabel(pid)]);
+    const elimParts = Object.entries(g.eliminatedBy || {}).filter(([, k]) => k)
+      .map(([v, k]) => playerName(k) + ' eliminated ' + playerName(v));
+    const text = st.pod.name + ' — ' + season.name + ' · Game ' + g.number + ' · ' + fmtDate(g.date) + '\n' +
+      rows.map(r => r[0] + ' ' + r[1]).join('\n') +
+      (elimParts.length ? '\n' + elimParts.join(' · ') : '') +
+      (g.firstBlood ? '\nFirst blood: ' + playerName(g.firstBlood) : '');
+    drawCard('Game ' + g.number, st.pod.name + ' · ' + season.name + ' · ' + fmtDate(g.date), rows)
+      .then(b => shareImage(b, 'podlog-game-' + g.number + '.png', text));
+  }
 
   // ---------- INIT ----------
   function init() {
@@ -998,6 +1041,7 @@
     $('btn-create-pod').onclick = () => { show('s-c1'); };
     $('c4-start').onclick = commitCreate;
     $('fab-log').onclick = openLog;
+    $('st-allgames').onclick = () => { renderGames(); show('s-games'); };
     $('pp-close').onclick = () => $('ov-player').classList.add('hidden');
     $('ov-player').onclick = e => { if (e.target.id === 'ov-player') $('ov-player').classList.add('hidden'); };
     $('ov-entry').onclick = e => { if (e.target.id === 'ov-entry') $('ov-entry').classList.add('hidden'); };

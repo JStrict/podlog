@@ -1,5 +1,5 @@
 /* PodLog service worker — offline-first app shell */
-const CACHE = 'podlog-v15';
+const CACHE = 'podlog-v16';
 const ASSETS = [
   './', './index.html',
   './css/styles.css',

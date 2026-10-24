@@ -328,6 +328,14 @@ table.standings .rk { font-weight: 800; width: 30px; }
 }
 .recent-row b { font-size: 15px; }
 .recent-row .chev { margin-left: auto; }
+.game-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: var(--card); border: none; border-radius: 12px; padding: 13px 14px; margin-top: 8px;
+  font-family: var(--font); color: var(--text); text-align: left;
+}
+.game-row .game-main { flex: 1; min-width: 0; cursor: pointer; }
+.game-row .game-title { font-weight: 700; font-size: 15px; }
+.game-row .game-places { font-size: 13px; color: var(--text2); margin-top: 3px; }
 .entry-row {
   display: block; width: 100%; background: none; border: none; border-radius: 10px;
   padding: 10px 8px; margin-top: 4px; font-size: 14px; font-family: var(--font);
