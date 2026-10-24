@@ -818,12 +818,25 @@
     const sr = $('set-roster'); sr.innerHTML = '';
     Store.state.players.forEach(p => {
       const row = document.createElement('div'); row.className = 'player-row';
-      const av = document.createElement('div'); av.className = 'avatar';
+      const av = document.createElement('button'); av.className = 'avatar'; av.title = 'Change photo';
       av.innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name));
-      const nm = document.createElement('input'); nm.className = 'field'; nm.value = p.name;
-      nm.onchange = () => { p.name = nm.value.trim() || p.name; Store.save(); };
-      row.appendChild(av); row.appendChild(nm); sr.appendChild(row);
-      clearable(nm);
+      av.onclick = () => {
+        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+        inp.onchange = () => {
+          const f = inp.files[0]; if (!f) return;
+          const r = new FileReader();
+          r.onload = () => { p.photo = r.result; Store.save(); renderSettings(); };
+          r.readAsDataURL(f);
+        };
+        inp.click();
+      };
+      const nm = document.createElement('input'); nm.className = 'field'; nm.value = p.name; nm.placeholder = 'Name';
+      nm.onchange = () => { p.name = nm.value.trim() || p.name; Store.save(); renderSettings(); };
+      const nn = document.createElement('input'); nn.className = 'field'; nn.placeholder = 'Nickname (optional)';
+      nn.style.maxWidth = '38%'; nn.value = p.nickname || '';
+      nn.onchange = () => { p.nickname = nn.value.trim(); Store.save(); };
+      row.appendChild(av); row.appendChild(nm); row.appendChild(nn); sr.appendChild(row);
+      clearable(nm); clearable(nn);
     });
   }
 
