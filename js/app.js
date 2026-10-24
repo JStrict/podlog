@@ -36,9 +36,25 @@
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     $$('#set-theme .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
   }
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.max(0, Math.min(255, (n >> 16) + amt));
+    const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+    const b = Math.max(0, Math.min(255, (n & 255) + amt));
+    return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  }
+  function relLum(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  }
   function applyPodColor() {
     const c = (Store.state.pod && Store.state.pod.color) || '#3E2FDC';
-    document.documentElement.style.setProperty('--pod', c);
+    const root = document.documentElement.style;
+    root.setProperty('--pod', c);
+    root.setProperty('--blue', c);
+    root.setProperty('--blue-dark', shade(c, -40));
+    root.setProperty('--on-blue', relLum(c) > 0.35 ? '#1c1c1e' : '#ffffff');
   }
 
   // ---------- CREATE FLOW ----------
@@ -362,6 +378,7 @@
     if (i >= 0) {
       logDraft.players.splice(i, 1);
       logDraft.slots = logDraft.slots.filter(id => id !== pid);
+      if (logDraft.slots.length > logDraft.players.length) logDraft.slots.length = logDraft.players.length;
       while (logDraft.slots.length < logDraft.players.length) logDraft.slots.push(null);
       delete logDraft.colors[pid]; delete logDraft.decks[pid]; delete logDraft.elims[pid];
       if (logDraft.firstBlood === pid) logDraft.firstBlood = '';

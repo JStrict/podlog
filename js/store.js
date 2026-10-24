@@ -5,7 +5,7 @@
   const KEY = 'podlog-state-v1';
   const COLORS = [
     { name: 'White',   hex: '#f5f5f7' },
-    { name: 'Blue',    hex: '#3E2FDC' },
+    { name: 'Indigo',  hex: '#3E2FDC' },
     { name: 'Black',   hex: '#1c1c1e' },
     { name: 'Red',     hex: '#d92d20' },
     { name: 'Green',   hex: '#1f8a3b' },
