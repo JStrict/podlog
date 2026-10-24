@@ -204,7 +204,7 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Share backup (save to Files)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.5 · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · v1.6 · © 2026</p>
       </div>
     </div>
   </section>
@@ -218,6 +218,8 @@
         <button class="date-row" id="log-datebtn"><span id="log-date">Today</span><span class="chev">›</span></button>
         <input type="date" id="log-dateinput" aria-label="Game date">
       </div>
+      <p class="section-h">Who played? <span class="muted" id="log-pcount"></span></p>
+      <div class="chips" id="log-players"></div>
       <p class="section-h">Placement — tap to assign</p>
       <div id="log-slots"></div>
       <button class="opt-row" id="log-optbtn"><span>+ Colors, decks, fun stats (optional)</span><span class="chev">›</span></button>

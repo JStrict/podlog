@@ -301,7 +301,7 @@
   }
 
   // ---------- LOG GAME ----------
-  const logDraft = { count: 0, slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elims: {} };
+  const logDraft = { count: 0, players: [], slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elims: {} };
   const MANA = ['W', 'U', 'B', 'R', 'G', 'C'];
 
   function openLog(editId) {
@@ -313,7 +313,8 @@
     if (editId) {
       const g = season.games.find(g => g.id === editId);
       if (!g) return;
-      logDraft.count = g.placements.length;
+      logDraft.players = g.placements.slice();
+      logDraft.count = logDraft.players.length;
       logDraft.slots = g.placements.slice();
       logDraft.date = g.date;
       logDraft.firstBlood = g.firstBlood || '';
@@ -324,7 +325,8 @@
       $('log-title').textContent = 'Edit Game ' + g.number;
       $('log-review').textContent = 'Review changes';
     } else {
-      logDraft.count = st.players.length;
+      logDraft.players = st.players.map(p => p.id);
+      logDraft.count = logDraft.players.length;
       logDraft.slots = new Array(logDraft.count).fill(null);
       logDraft.date = todayISO();
       logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elims = {};
@@ -335,9 +337,42 @@
     $('log-dateinput').value = logDraft.date;
     $('log-opts').classList.add('hidden');
     $('log-delete').classList.toggle('hidden', !editId);
+    renderLogPlayers();
     renderLogSlots();
     renderLogOpts();
     show('s-log');
+  }
+
+  function renderLogPlayers() {
+    const wrap = $('log-players'); wrap.innerHTML = '';
+    Store.state.players.forEach(p => {
+      const on = logDraft.players.includes(p.id);
+      const b = document.createElement('button');
+      b.className = 'chip' + (on ? ' active' : '');
+      b.textContent = p.name;
+      b.onclick = () => toggleLogPlayer(p.id);
+      wrap.appendChild(b);
+    });
+    const n = logDraft.players.length;
+    $('log-pcount').textContent = n + ' in' + (n < 4 ? ' — need at least 4' : '');
+  }
+
+  function toggleLogPlayer(pid) {
+    const i = logDraft.players.indexOf(pid);
+    if (i >= 0) {
+      logDraft.players.splice(i, 1);
+      logDraft.slots = logDraft.slots.filter(id => id !== pid);
+      while (logDraft.slots.length < logDraft.players.length) logDraft.slots.push(null);
+      delete logDraft.colors[pid]; delete logDraft.decks[pid]; delete logDraft.elims[pid];
+      if (logDraft.firstBlood === pid) logDraft.firstBlood = '';
+    } else {
+      logDraft.players.push(pid);
+      const order = Store.state.players.map(p => p.id);
+      logDraft.players.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      logDraft.slots.push(null);
+    }
+    logDraft.count = logDraft.players.length;
+    renderLogPlayers(); renderLogSlots(); renderLogOpts();
   }
 
   function renderLogSlots() {
@@ -361,7 +396,9 @@
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
     $('picker-title').textContent = 'Who placed ' + ord[slot] + '?';
     const list = $('picker-list'); list.innerHTML = '';
-    Store.state.players.forEach(p => {
+    logDraft.players.forEach(pid => {
+      const p = Store.state.players.find(x => x.id === pid);
+      if (!p) return;
       const taken = logDraft.slots.includes(p.id);
       const b = document.createElement('button');
       b.textContent = p.nickname ? p.name + ' "' + p.nickname + '"' : p.name;
@@ -418,6 +455,7 @@
     };
     $('log-optbtn').onclick = () => { $('log-opts').classList.toggle('hidden'); renderLogOpts(); };
     $('log-review').onclick = () => {
+      if (logDraft.players.length < 4) { alert('Pick at least 4 players for a game.'); return; }
       if (logDraft.slots.some(s => !s)) { alert('Assign every placement slot first.'); return; }
       renderConfirm();
       show('s-confirm');
