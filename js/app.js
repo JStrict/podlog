@@ -779,7 +779,17 @@
     const pod = Store.state.pod;
     if (pod) {
       $('set-podname').value = pod.name;
-      swatchRow($('set-podcolors'), pod.color, hex => { pod.color = hex; Store.save(); applyPodColor(); });
+      swatchRow($('set-podcolors'), pod.color, hex => {
+        pod.color = hex;
+        // keep auto season markers on the calendar in sync immediately
+        const season = Store.activeSeason();
+        if (season) {
+          Store.state.calendar.forEach(e => {
+            if (e.type === 'season' && (e.title === season.name + ' begins' || e.title === season.name + ' ends')) e.color = hex;
+          });
+        }
+        Store.save(); applyPodColor();
+      });
       const gg = $('set-podglyphs');
       if (!gg.children.length) {
         ['◆', '●', '▲', '■', '♛', '⬟', '⬢', '✦', '☾', '⚑', '❖', '⬣'].forEach(g => {
