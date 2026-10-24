@@ -66,6 +66,14 @@ h2 { font-size: 22px; margin: 0; }
   width: 100%; padding: 15px 16px; font-size: 16px; font-family: var(--font);
   border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text);
 }
+.field-wrap { position: relative; flex: 1; min-width: 0; }
+.field-wrap .field { padding-right: 40px; }
+.field-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; border-radius: 50%; border: none; padding: 0;
+  background: var(--border); color: var(--text2); font-size: 17px; line-height: 1;
+  cursor: pointer; font-family: var(--font);
+}
 .field:focus { outline: none; border-color: var(--blue); }
 .btn-primary, .btn-secondary {
   border: none; border-radius: 16px; padding: 17px 20px; font-size: 17px; font-weight: 600;

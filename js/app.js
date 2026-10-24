@@ -60,8 +60,26 @@
   // ---------- CREATE FLOW ----------
   const draft = { name: '', iconDataUrl: null, glyph: null, color: '#3E2FDC', count: 6, players: [], len: 'games', games: 20, start: '', end: '' };
 
-  function swatchRow(el, sel, cb) {
-    el.innerHTML = '';
+  // Wraps a text input with an × clear button (iOS-style). Idempotent.
+  function clearable(input) {
+    if (!input || input.dataset.clearable) return input;
+    input.dataset.clearable = '1';
+    const wrap = document.createElement('div');
+    wrap.className = 'field-wrap';
+    if (input.style.maxWidth) { wrap.style.maxWidth = input.style.maxWidth; input.style.maxWidth = ''; }
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'field-clear hidden'; x.textContent = '×';
+    x.setAttribute('aria-label', 'Clear field');
+    const sync = () => x.classList.toggle('hidden', !input.value);
+    x.onclick = e => { e.preventDefault(); input.value = ''; sync(); input.focus(); };
+    input.addEventListener('input', sync);
+    wrap.appendChild(x); sync();
+    return input;
+  }
+
+  function swatchRow(el, sel, cb) {    el.innerHTML = '';
     COLORS.forEach(c => {
       const b = document.createElement('button');
       b.style.background = c.hex; b.title = c.name;
@@ -73,6 +91,7 @@
   }
 
   function initCreate1() {
+    clearable($('c1-name'));
     swatchRow($('c1-colors'), draft.color, hex => { draft.color = hex; });
     const glyphs = ['◆', '●', '▲', '■', '♛', '⬟', '⬢', '✦', '☾', '⚑', '❖', '⬣'];
     const gg = $('c1-glyphs');
@@ -138,6 +157,7 @@
       const nn = document.createElement('input'); nn.className = 'field'; nn.placeholder = 'Nickname (optional)'; nm.style.marginTop = '0';
       nn.style.maxWidth = '38%'; nn.value = p.nickname; nn.oninput = () => { p.nickname = nn.value; };
       row.appendChild(av); row.appendChild(nm); row.appendChild(nn);
+      clearable(nm); clearable(nn);
       rows.appendChild(row);
     });
   }
@@ -456,7 +476,7 @@
       if (i >= 0) logDraft.colors[pid].splice(i, 1); else logDraft.colors[pid].push(b.dataset.m);
       b.classList.toggle('on');
     });
-    $$('#log-opts [data-deck]').forEach(i => i.oninput = () => { logDraft.decks[i.dataset.deck] = i.value; });
+    $$('#log-opts [data-deck]').forEach(i => { clearable(i); i.oninput = () => { logDraft.decks[i.dataset.deck] = i.value; }; });
     $$('#log-opts [data-el]').forEach(b => b.onclick = () => {
       const pid = b.dataset.p;
       logDraft.elims[pid] = Math.max(0, (logDraft.elims[pid] || 0) + parseInt(b.dataset.el, 10));
@@ -639,6 +659,8 @@
     $('cal-prev').onclick = () => { calM--; if (calM < 0) { calM = 11; calY--; } renderCalendar(); };
     $('cal-next').onclick = () => { calM++; if (calM > 11) { calM = 0; calY++; } renderCalendar(); };
     $('cal-newbtn').onclick = () => openEntryNew();
+    clearable($('entry-title'));
+    clearable($('entry-notes'));
     $('entry-cancel').onclick = () => $('ov-entry').classList.add('hidden');
     $('entry-delete').onclick = () => {
       if (!entryEditingId) return;
@@ -801,10 +823,12 @@
       const nm = document.createElement('input'); nm.className = 'field'; nm.value = p.name;
       nm.onchange = () => { p.name = nm.value.trim() || p.name; Store.save(); };
       row.appendChild(av); row.appendChild(nm); sr.appendChild(row);
+      clearable(nm);
     });
   }
 
   function initSettings() {
+    clearable($('set-podname'));
     $('set-podname').onchange = e => {
       const v = e.target.value.trim();
       if (v && Store.state.pod) { Store.state.pod.name = v; Store.save(); }
