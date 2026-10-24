@@ -1,5 +1,5 @@
 /* PodLog service worker — offline-first app shell */
-const CACHE = 'podlog-v5';
+const CACHE = 'podlog-v6';
 const ASSETS = [
   './', './index.html',
   './css/styles.css',
@@ -16,9 +16,29 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const p = url.pathname;
+  // App shell (page, JS, CSS): network-first so updates apply on next online
+  // launch without waiting for a service worker update to be detected.
+  const isShell = e.request.mode === 'navigate' ||
+    p.endsWith('.js') || p.endsWith('.css') || p.endsWith('.html') ||
+    p.endsWith('/podlog/') || p.endsWith('/podlog');
+  if (isShell) {
+    e.respondWith(fetch(e.request).then(res => {
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() => caches.match(e.request).then(hit => hit || caches.match('./index.html'))));
+    return;
+  }
+  // Assets (images, icons): cache-first, they rarely change.
   e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-    const copy = res.clone();
-    caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+    if (res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+    }
     return res;
   }).catch(() => caches.match('./index.html'))));
 });

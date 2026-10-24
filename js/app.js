@@ -772,7 +772,15 @@
       download('podlog-games.csv', gameLog, 'text/csv');
       download('podlog-standings.csv', standings, 'text/csv');
     };
-    $('set-backup').onclick = () => download('podlog-backup.json', Store.backupJSON(), 'application/json');
+    $('set-backup').onclick = async () => {
+      const json = Store.backupJSON();
+      const file = new File([json], 'podlog-backup.json', { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'PodLog backup' }); return; }
+        catch (err) { if (err && err.name === 'AbortError') return; }
+      }
+      download('podlog-backup.json', json, 'application/json');
+    };
     $('set-restore').onclick = () => $('set-restore-file').click();
     $('set-restore-file').onchange = e => {
       const f = e.target.files[0]; if (!f) return;
