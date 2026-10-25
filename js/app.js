@@ -133,7 +133,7 @@
     $('c2-continue').disabled = bad;
     $('c2-continue').style.opacity = bad ? .4 : 1;
     $('c2-minus').disabled = draft.count <= 1;
-    $('c2-plus').disabled = draft.count >= 8;
+    $('c2-plus').disabled = draft.count >= 10;
     while (draft.players.length < draft.count) draft.players.push({ name: '', nickname: '', photo: null });
     draft.players.length = draft.count;
     const rows = $('c2-rows'); rows.innerHTML = '';
@@ -164,7 +164,7 @@
 
   function initCreate2() {
     $('c2-minus').onclick = () => { if (draft.count > 1) { draft.count--; renderCreate2(); } };
-    $('c2-plus').onclick = () => { if (draft.count < 8) { draft.count++; renderCreate2(); } };
+    $('c2-plus').onclick = () => { if (draft.count < 10) { draft.count++; renderCreate2(); } };
     $('c2-continue').onclick = () => {
       if (draft.count < 4) return;
       draft.players.forEach((p, i) => { if (!p.name.trim()) p.name = 'Player ' + (i + 1); });
@@ -999,9 +999,35 @@
       const nn = document.createElement('input'); nn.className = 'field'; nn.placeholder = 'Nickname (optional)';
       nn.style.maxWidth = '38%'; nn.value = p.nickname || '';
       nn.onchange = () => { p.nickname = nn.value.trim(); Store.save(); };
-      row.appendChild(av); row.appendChild(nm); row.appendChild(nn); sr.appendChild(row);
+      const rm = document.createElement('button'); rm.className = 'btn-secondary'; rm.textContent = '×'; rm.title = 'Remove player';
+      rm.style.cssText = 'padding:10px 14px;font-size:18px;flex:none;';
+      rm.onclick = () => {
+        if (Store.state.players.length <= 4) { alert('A pod needs at least 4 players.'); return; }
+        const hasGames = Store.state.seasons.some(s => s.games.some(g => g.placements.includes(p.id)));
+        if (hasGames) { alert(p.name + ' has logged games, so they stay in the record.'); return; }
+        Store.state.players = Store.state.players.filter(x => x.id !== p.id);
+        Store.save(); renderSettings();
+      };
+      row.appendChild(av); row.appendChild(nm); row.appendChild(nn); row.appendChild(rm); sr.appendChild(row);
       clearable(nm); clearable(nn);
     });
+    // add a player (roster is 4-10)
+    const addRow = document.createElement('div'); addRow.className = 'player-row';
+    const addNm = document.createElement('input'); addNm.className = 'field'; addNm.placeholder = 'New player name'; addNm.maxLength = 40;
+    const addBtn = document.createElement('button'); addBtn.className = 'btn-secondary'; addBtn.textContent = 'Add'; addBtn.style.cssText = 'padding:12px 18px;flex:none;';
+    addBtn.disabled = Store.state.players.length >= 10;
+    addBtn.onclick = () => {
+      const name = addNm.value.trim();
+      if (!name || Store.state.players.length >= 10) return;
+      Store.state.players.push({ id: uid(), name, nickname: '', photo: null });
+      Store.save(); renderSettings();
+    };
+    addRow.appendChild(addNm); addRow.appendChild(addBtn); sr.appendChild(addRow);
+    if (Store.state.players.length >= 10) {
+      const full = document.createElement('p'); full.className = 'muted'; full.style.cssText = 'font-size:13px;margin:10px 0 0';
+      full.textContent = 'Pod is full (10 players).';
+      sr.appendChild(full);
+    }
   }
 
   function initSettings() {
