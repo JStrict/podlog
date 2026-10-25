@@ -239,13 +239,41 @@
     switchTab(tab || 'standings');
   }
 
+  const TAB_ORDER = ['standings', 'hof', 'calendar', 'settings'];
+  let currentTab = 'standings';
+  let tabAnimId = 0;
   function switchTab(name) {
     $$('#folder-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-    ['standings', 'hof', 'calendar', 'settings'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+    $('fab-log').style.display = name === 'standings' ? '' : 'none';
+    const prev = currentTab;
+    currentTab = name;
     if (name === 'standings') renderStandings();
     if (name === 'hof') renderHOF();
     if (name === 'calendar') renderCalendar();
     if (name === 'settings') renderSettings();
+    const panes = TAB_ORDER.map(t => $('tab-' + t));
+    panes.forEach(el => el.classList.remove('pane-anim', 'pane-abs', 'pane-from-right', 'pane-from-left', 'pane-to-left', 'pane-to-right'));
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prev === name || reduced) {
+      panes.forEach((el, i) => el.classList.toggle('hidden', TAB_ORDER[i] !== name));
+      return;
+    }
+    const dir = TAB_ORDER.indexOf(name) > TAB_ORDER.indexOf(prev) ? 1 : -1;
+    const outEl = $('tab-' + prev), inEl = $('tab-' + name);
+    panes.forEach(el => { if (el !== outEl && el !== inEl) el.classList.add('hidden'); });
+    outEl.classList.remove('hidden');
+    inEl.classList.remove('hidden');
+    inEl.classList.add('pane-anim', dir === 1 ? 'pane-from-right' : 'pane-from-left');
+    outEl.classList.add('pane-anim', 'pane-abs', dir === 1 ? 'pane-to-left' : 'pane-to-right');
+    void inEl.offsetWidth;
+    inEl.classList.remove('pane-from-right', 'pane-from-left');
+    const myId = ++tabAnimId;
+    setTimeout(() => {
+      if (myId !== tabAnimId) return;
+      outEl.classList.add('hidden');
+      outEl.classList.remove('pane-anim', 'pane-abs', 'pane-to-left', 'pane-to-right');
+      inEl.classList.remove('pane-anim');
+    }, 340);
   }
 
   // ---------- STANDINGS ----------
@@ -469,10 +497,10 @@
       const b = document.createElement('button');
       b.textContent = p.nickname ? p.name + ' "' + p.nickname + '"' : p.name;
       b.disabled = taken;
-      b.onclick = () => { logDraft.slots[slot] = p.id; $('picker-back').classList.add('hidden'); renderLogSlots(); renderLogOpts(); };
+      b.onclick = () => { logDraft.slots[slot] = p.id; $('picker-back').classList.remove('open'); renderLogSlots(); renderLogOpts(); };
       list.appendChild(b);
     });
-    $('picker-back').classList.remove('hidden');
+    $('picker-back').classList.add('open');
   }
 
   function renderLogOpts() {
@@ -516,8 +544,8 @@
   }
 
   function initLog() {
-    $('picker-cancel').onclick = () => $('picker-back').classList.add('hidden');
-    $('picker-back').onclick = e => { if (e.target.id === 'picker-back') $('picker-back').classList.add('hidden'); };
+    $('picker-cancel').onclick = () => $('picker-back').classList.remove('open');
+    $('picker-back').onclick = e => { if (e.target.id === 'picker-back') $('picker-back').classList.remove('open'); };
     $('log-dateinput').onchange = e => {
       if (e.target.value) { logDraft.date = e.target.value; $('log-date').textContent = fmtDateLong(logDraft.date); }
     };
@@ -711,14 +739,14 @@
     $('cal-newbtn').onclick = () => openEntryNew();
     clearable($('entry-title'));
     clearable($('entry-notes'));
-    $('entry-cancel').onclick = () => $('ov-entry').classList.add('hidden');
+    $('entry-cancel').onclick = () => $('ov-entry').classList.remove('open');
     $('entry-delete').onclick = () => {
       if (!entryEditingId) return;
       const e = Store.state.calendar.find(x => x.id === entryEditingId);
       if (e && confirm('Delete "' + e.title + '"?')) {
         Store.state.calendar = Store.state.calendar.filter(x => x.id !== entryEditingId);
         Store.save();
-        $('ov-entry').classList.add('hidden');
+        $('ov-entry').classList.remove('open');
         renderCalendar();
       }
     };
@@ -742,7 +770,7 @@
         if ($('entry-quick').checked) Store.state.quickActions.push({ id: uid(), title, type, color });
       }
       Store.save();
-      $('ov-entry').classList.add('hidden');
+      $('ov-entry').classList.remove('open');
       renderCalendar();
     };
   }
@@ -760,7 +788,7 @@
     $$('#entry-types .chip').forEach(x => x.classList.toggle('active', x.dataset.t === 'custom'));
     swatchRow($('entry-colors'), entryColor, hex => { entryColor = hex; });
     $('entry-delete').classList.add('hidden');
-    $('ov-entry').classList.remove('hidden');
+    $('ov-entry').classList.add('open');
   }
 
   function openEntryEdit(id) {
@@ -776,7 +804,7 @@
     $$('#entry-types .chip').forEach(x => x.classList.toggle('active', x.dataset.t === e.type));
     swatchRow($('entry-colors'), entryColor, hex => { entryColor = hex; });
     $('entry-delete').classList.remove('hidden');
-    $('ov-entry').classList.remove('hidden');
+    $('ov-entry').classList.add('open');
   }
 
   // ---------- PLAYER PROFILE ----------  // ---------- PLAYER PROFILE ----------
@@ -808,7 +836,7 @@
       $('pp-fun').innerHTML += (elimVs ? '<p class="kv">Eliminated <b>' + elimVs + '</b></p>' : '') +
         (elimBy ? '<p class="kv">Eliminated by <b>' + elimBy + '</b></p>' : '');
     }
-    $('ov-player').classList.remove('hidden');
+    $('ov-player').classList.add('open');
   }
 
   // ---------- HOF ----------
@@ -1044,9 +1072,9 @@
     $('c4-start').onclick = commitCreate;
     $('fab-log').onclick = openLog;
     $('st-allgames').onclick = () => { renderGames(); show('s-games'); };
-    $('pp-close').onclick = () => $('ov-player').classList.add('hidden');
-    $('ov-player').onclick = e => { if (e.target.id === 'ov-player') $('ov-player').classList.add('hidden'); };
-    $('ov-entry').onclick = e => { if (e.target.id === 'ov-entry') $('ov-entry').classList.add('hidden'); };
+    $('pp-close').onclick = () => $('ov-player').classList.remove('open');
+    $('ov-player').onclick = e => { if (e.target.id === 'ov-player') $('ov-player').classList.remove('open'); };
+    $('ov-entry').onclick = e => { if (e.target.id === 'ov-entry') $('ov-entry').classList.remove('open'); };
     $('share-standings').onclick = shareStandings;
     $('share-hof').onclick = () => {
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);

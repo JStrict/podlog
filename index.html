@@ -127,6 +127,7 @@
       <button data-tab="settings">Settings</button>
     </nav>
 
+    <div class="tab-stage">
     <div class="tabpane" id="tab-standings">
       <div class="pad">
         <div class="pod-head">
@@ -142,7 +143,6 @@
         <div id="st-recent"></div>
         <button class="btn-secondary btn-block mt hidden" id="st-allgames">View all games</button>
       </div>
-      <button class="fab" id="fab-log">Log Game 1</button>
     </div>
 
     <div class="tabpane hidden" id="tab-hof">
@@ -205,9 +205,11 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Share backup (save to Files)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.17 · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · v1.18 · © 2026</p>
       </div>
     </div>
+    </div>
+    <button class="fab" id="fab-log">Log Game 1</button>
   </section>
 
   <!-- ============ GAMES LEDGER ============ -->
@@ -238,7 +240,7 @@
   </section>
 
   <!-- player picker sheet -->
-  <div class="sheet-back hidden" id="picker-back">
+  <div class="sheet-back" id="picker-back">
     <div class="sheet">
       <h3 id="picker-title">Who placed 1st?</h3>
       <div id="picker-list"></div>
@@ -290,7 +292,7 @@
   </section>
 
   <!-- ============ PLAYER PROFILE OVERLAY ============ -->
-  <div class="overlay hidden" id="ov-player">
+  <div class="overlay" id="ov-player">
     <div class="sheet">
       <div class="grab"></div>
       <div class="profile-head">
@@ -308,7 +310,7 @@
   </div>
 
   <!-- ============ CREATE-NEW SHEET (calendar) ============ -->
-  <div class="overlay hidden" id="ov-entry">
+  <div class="overlay" id="ov-entry">
     <div class="sheet">
       <div class="grab"></div>
       <h3 id="entry-h">Create new</h3>
