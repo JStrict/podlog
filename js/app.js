@@ -319,7 +319,7 @@
       };
     } else lb.classList.add('hidden');
 
-    const table = S.computeStandings(st.players, season.games);
+    const table = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
     const fab = $('fab-log');
     if (locked) {
       fab.textContent = 'Start ' + 'Season ' + (season.number + 1);
@@ -416,7 +416,7 @@
       $('log-title').textContent = 'Edit Game ' + g.number;
       $('log-review').textContent = 'Review changes';
     } else {
-      logDraft.players = st.players.map(p => p.id);
+      logDraft.players = st.players.filter(p => !p.archived).map(p => p.id);
       logDraft.count = logDraft.players.length;
       logDraft.slots = new Array(logDraft.count).fill(null);
       logDraft.date = todayISO();
@@ -505,7 +505,7 @@
 
   function renderLogPlayers() {
     const wrap = $('log-players'); wrap.innerHTML = '';
-    Store.state.players.forEach(p => {
+    Store.state.players.filter(p => !p.archived || logDraft.players.includes(p.id)).forEach(p => {
       const on = logDraft.players.includes(p.id);
       const b = document.createElement('button');
       b.className = 'chip' + (on ? ' active' : '');
@@ -666,7 +666,7 @@
       if (orig && orig.eliminations) game.eliminations = Object.assign({}, orig.eliminations);
     }
     const base = editing ? season.games.filter(g => g.id !== logDraft.editingId) : season.games;
-    const pv = S.previewImpact(st.players, base, game);
+    const pv = S.previewImpact(S.seasonPlayers(st.players, season), base, game);
     $('confirm-impact').innerHTML = pv.moves.map(m => {
       const arrow = m.isNew ? '<span class="flat">new</span>'
         : m.move > 0 ? '<span class="up">▲' + m.move + '</span>'
@@ -707,7 +707,7 @@
     $('end-title').textContent = season.name;
     const champ = st.players.find(p => p.id === season.champion);
     const spoon = st.players.find(p => p.id === season.woodenSpoon);
-    const table = S.computeStandings(st.players, season.games);
+    const table = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
     const cs = table.ranked.find(p => p.id === season.champion);
     $('end-champ').textContent = champ ? champ.name : '—';
     $('end-champ-line').textContent = cs ? S.fmtWL(cs) + ' · ' + S.fmtPct(cs.winPct) + ' win' : '';
@@ -918,6 +918,26 @@
   }
 
   // ---------- SETTINGS ----------
+  function openActionSheet(p) {
+    $('action-title').textContent = p.name;
+    $('action-archive').onclick = () => {
+      $('ov-action').classList.remove('open');
+      const active = Store.state.players.filter(x => !x.archived);
+      if (active.length <= 4) { alert('A pod needs at least 4 active players.'); return; }
+      p.archived = true; Store.save(); renderSettings();
+    };
+    $('action-remove').onclick = () => {
+      $('ov-action').classList.remove('open');
+      const active = Store.state.players.filter(x => !x.archived);
+      if (active.length <= 4) { alert('A pod needs at least 4 active players.'); return; }
+      const hasGames = Store.state.seasons.some(s => s.games.some(g => g.placements.includes(p.id)));
+      if (hasGames) { alert(p.name + ' has logged games, so they can\'t be removed. Archive them instead to keep them in the record but out of new games.'); return; }
+      Store.state.players = Store.state.players.filter(x => x.id !== p.id);
+      Store.save(); renderSettings();
+    };
+    $('ov-action').classList.add('open');
+  }
+
   function renderSettings() {
     const s = Store.state.settings;
     $('set-remind').checked = s.remind;
@@ -980,7 +1000,7 @@
       sw.innerHTML = '';
     }
     const sr = $('set-roster'); sr.innerHTML = '';
-    Store.state.players.forEach(p => {
+    Store.state.players.filter(p => !p.archived).forEach(p => {
       const row = document.createElement('div'); row.className = 'player-row';
       const av = document.createElement('button'); av.className = 'avatar'; av.title = 'Change photo';
       av.innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name));
@@ -999,34 +1019,47 @@
       const nn = document.createElement('input'); nn.className = 'field'; nn.placeholder = 'Nickname (optional)';
       nn.style.maxWidth = '38%'; nn.value = p.nickname || '';
       nn.onchange = () => { p.nickname = nn.value.trim(); Store.save(); };
-      const rm = document.createElement('button'); rm.className = 'btn-secondary'; rm.textContent = '×'; rm.title = 'Remove player';
+      const rm = document.createElement('button'); rm.className = 'btn-secondary'; rm.textContent = '…'; rm.title = 'Player options';
       rm.style.cssText = 'padding:10px 14px;font-size:18px;flex:none;';
-      rm.onclick = () => {
-        if (Store.state.players.length <= 4) { alert('A pod needs at least 4 players.'); return; }
-        const hasGames = Store.state.seasons.some(s => s.games.some(g => g.placements.includes(p.id)));
-        if (hasGames) { alert(p.name + ' has logged games, so they stay in the record.'); return; }
-        Store.state.players = Store.state.players.filter(x => x.id !== p.id);
-        Store.save(); renderSettings();
-      };
+      rm.onclick = () => openActionSheet(p);
       row.appendChild(av); row.appendChild(nm); row.appendChild(nn); row.appendChild(rm); sr.appendChild(row);
       clearable(nm); clearable(nn);
     });
-    // add a player (roster is 4-10)
+    // add a player (roster is 4-10 active players)
     const addRow = document.createElement('div'); addRow.className = 'player-row';
     const addNm = document.createElement('input'); addNm.className = 'field'; addNm.placeholder = 'New player name'; addNm.maxLength = 40;
     const addBtn = document.createElement('button'); addBtn.className = 'btn-secondary'; addBtn.textContent = 'Add'; addBtn.style.cssText = 'padding:12px 18px;flex:none;';
-    addBtn.disabled = Store.state.players.length >= 10;
+    const activeCount = () => Store.state.players.filter(x => !x.archived).length;
+    addBtn.disabled = activeCount() >= 10;
     addBtn.onclick = () => {
       const name = addNm.value.trim();
-      if (!name || Store.state.players.length >= 10) return;
+      if (!name || activeCount() >= 10) return;
       Store.state.players.push({ id: uid(), name, nickname: '', photo: null });
       Store.save(); renderSettings();
     };
     addRow.appendChild(addNm); addRow.appendChild(addBtn); sr.appendChild(addRow);
-    if (Store.state.players.length >= 10) {
+    if (activeCount() >= 10) {
       const full = document.createElement('p'); full.className = 'muted'; full.style.cssText = 'font-size:13px;margin:10px 0 0';
-      full.textContent = 'Pod is full (10 players).';
+      full.textContent = 'Pod is full (10 active players).';
       sr.appendChild(full);
+    }
+    // archived players: still in the record, out of new games, reversible
+    const archived = Store.state.players.filter(p => p.archived);
+    if (archived.length) {
+      const ah = document.createElement('p'); ah.className = 'section-h'; ah.style.marginTop = '18px'; ah.textContent = 'Archived';
+      sr.appendChild(ah);
+      archived.forEach(p => {
+        const row = document.createElement('div'); row.className = 'player-row';
+        const av = document.createElement('div'); av.className = 'avatar';
+        av.innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name));
+        const nm = document.createElement('span'); nm.className = 'muted'; nm.style.flex = '1'; nm.textContent = p.name;
+        const un = document.createElement('button'); un.className = 'btn-secondary'; un.textContent = 'Unarchive'; un.style.cssText = 'padding:12px 18px;flex:none;';
+        un.onclick = () => {
+          if (activeCount() >= 10) { alert('Pod is full (10 active players).'); return; }
+          p.archived = false; Store.save(); renderSettings();
+        };
+        row.appendChild(av); row.appendChild(nm); row.appendChild(un); sr.appendChild(row);
+      });
     }
   }
 
@@ -1123,7 +1156,7 @@
   }
   function shareStandings() {
     const st = Store.state; const season = Store.activeSeason(); if (!season) return;
-    const t = S.computeStandings(st.players, season.games);
+    const t = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
     const rows = t.ranked.slice(0, 6).map((p, i) => [(i + 1) + '.', p.name + '  ' + S.fmtWL(p) + '  ' + S.fmtPct(p.winPct)]);
     const text = st.pod.name + ' — ' + season.name + '\n' + rows.map(r => r[0] + ' ' + r[1]).join('\n');
     drawCard(st.pod.name + ' · ' + season.name, 'Game ' + season.games.length + (season.type === 'games' ? ' of ' + season.gameCount : ''), rows)
@@ -1170,6 +1203,8 @@
     $('pp-close').onclick = () => $('ov-player').classList.remove('open');
     $('ov-player').onclick = e => { if (e.target.id === 'ov-player') $('ov-player').classList.remove('open'); };
     $('ov-entry').onclick = e => { if (e.target.id === 'ov-entry') $('ov-entry').classList.remove('open'); };
+    $('action-cancel').onclick = () => $('ov-action').classList.remove('open');
+    $('ov-action').onclick = e => { if (e.target.id === 'ov-action') $('ov-action').classList.remove('open'); };
     $('share-standings').onclick = shareStandings;
     $('share-hof').onclick = () => {
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);

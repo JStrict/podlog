@@ -205,7 +205,7 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Share backup (save to Files)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.20 · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · v1.21 · © 2026</p>
       </div>
     </div>
     </div>
@@ -333,6 +333,17 @@
         <button class="btn-primary flex1" id="entry-save">Save</button>
       </div>
       <button class="link-danger hidden" id="entry-delete">Delete this entry</button>
+    </div>
+  </div>
+
+  <!-- ============ PLAYER ACTION SHEET ============ -->
+  <div class="overlay" id="ov-action">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3 id="action-title">Player</h3>
+      <button class="btn-secondary btn-block" id="action-archive">Archive</button>
+      <button class="link-danger" id="action-remove">Remove</button>
+      <button class="btn-secondary btn-block mt" id="action-cancel">Cancel</button>
     </div>
   </div>
 

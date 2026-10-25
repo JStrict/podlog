@@ -142,7 +142,7 @@
       const season = st.seasons.find(s => s.id === seasonId);
       if (!season || season.status !== 'active') return null;
       const S = root.PodLogScoring;
-      const table = S.computeStandings(st.players, season.games);
+      const table = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
       const champ = table.ranked[0] || null;
       const last = table.ranked[table.ranked.length - 1] || table.unranked[table.unranked.length - 1] || null;
       season.status = 'locked';
@@ -192,7 +192,7 @@
       let table = 'rank,player,w,l,win_pct,placement_points,streak,qualified\n';
       const s = this.activeSeason();
       if (s) {
-        const st2 = S.computeStandings(st.players, s.games);
+        const st2 = S.computeStandings(S.seasonPlayers(st.players, s), s.games);
         st2.ranked.forEach((p, i) => {
           table += [i + 1, csv(p.name), p.wins, p.played - p.wins,
             Math.round(p.winPct * 100) + '%', p.points,

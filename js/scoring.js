@@ -249,7 +249,14 @@
     return { rows, seasons: locked.length };
   }
 
-  const api = { placementPoints, gameWinner, playerStats, headToHead, computeStandings, previewImpact, hallOfFame, fmtPct, fmtWL, eliminationCounts, eliminationVs };
+  // Players visible in a season's table: active players, plus anyone who
+  // played in that season (archived players keep their history).
+  function seasonPlayers(players, season) {
+    if (!season) return players;
+    return players.filter(p => !p.archived || season.games.some(g => g.placements.includes(p.id)));
+  }
+
+  const api = { placementPoints, gameWinner, playerStats, headToHead, computeStandings, previewImpact, hallOfFame, fmtPct, fmtWL, eliminationCounts, eliminationVs, seasonPlayers };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PodLogScoring = api;
 })(typeof self !== 'undefined' ? self : this);
