@@ -477,24 +477,24 @@
 
   function renderLogOpts() {
     const wrap = $('log-opts');
-    const assigned = logDraft.slots.filter(Boolean);
-    if (!assigned.length) { wrap.innerHTML = ''; return; }
+    const people = logDraft.players.slice();
+    if (!people.length) { wrap.innerHTML = '<p class="muted">Pick players above to add optional stats.</p>'; return; }
     let html = '<p class="section-h">First blood</p><select class="field" id="opt-fb"><option value="">—</option>' +
-      assigned.map(id => '<option value="' + id + '"' + (logDraft.firstBlood === id ? ' selected' : '') + '>' + esc(playerName(id)) + '</option>').join('') + '</select>';
+      people.map(id => '<option value="' + id + '"' + (logDraft.firstBlood === id ? ' selected' : '') + '>' + esc(playerName(id)) + '</option>').join('') + '</select>';
     html += '<p class="section-h">Turns</p><input class="field" id="opt-turns" type="number" min="1" placeholder="e.g. 9" value="' + esc(logDraft.turns || '') + '">';
     html += '<p class="section-h">Colors & decks</p>';
-    assigned.forEach(id => {
+    people.forEach(id => {
       const cols = logDraft.colors[id] || [];
       html += '<div style="margin-top:10px"><b>' + esc(playerName(id)) + '</b><div class="mana-row" data-mana="' + id + '">' +
         MANA.map(m => '<button class="mana' + (cols.includes(m) ? ' on' : '') + '" data-m="' + m + '">' + m + '</button>').join('') + '</div>' +
         '<input class="field mt" data-deck="' + id + '" placeholder="Deck nickname (optional)" style="padding:10px 12px;font-size:14px" value="' + esc(logDraft.decks[id] || '') + '"></div>';
     });
     html += '<p class="section-h">Eliminated by</p>';
-    assigned.forEach(id => {
+    people.forEach(id => {
       if (logDraft.slots[0] === id) return; // winner was not eliminated
       html += '<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="muted" style="font-size:13px;flex:1">' + esc(playerName(id)) + '</span>' +
         '<select class="field" data-elimby="' + id + '" style="flex:2;padding:10px 12px;font-size:14px"><option value="">—</option>' +
-        assigned.filter(x => x !== id).map(x => '<option value="' + x + '"' + (logDraft.elimBy[id] === x ? ' selected' : '') + '>' + esc(playerName(x)) + '</option>').join('') + '</select></div>';
+        people.filter(x => x !== id).map(x => '<option value="' + x + '"' + (logDraft.elimBy[id] === x ? ' selected' : '') + '>' + esc(playerName(x)) + '</option>').join('') + '</select></div>';
     });
     wrap.innerHTML = html;
     const fbSel = wrap.querySelector('#opt-fb');
