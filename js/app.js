@@ -465,29 +465,23 @@
     c.style.width = '100vw'; c.style.height = '100dvh';
     c.style.borderRadius = '0px'; c.style.background = 'var(--bg)';
     c.style.color = 'transparent'; c.style.boxShadow = 'none';
+    // reveal the form through the clone as the grow finishes, no black beat
     setTimeout(() => {
       openLog();
       morphOpen = !$('s-log').classList.contains('hidden');
-      c.style.transition = 'opacity .2s ease';
+      c.style.transition = 'opacity .25s ease';
       c.style.opacity = '0';
-      setTimeout(() => { c.remove(); morphRunning = false; }, 220);
-    }, 470);
+      setTimeout(() => { c.remove(); morphRunning = false; }, 270);
+    }, 350);
   }
   function closeLogMorph() {
     $('picker-back').classList.remove('open');
     if (!morphOpen || morphRunning || reducedMotion()) { morphOpen = false; show('s-main'); return; }
     morphRunning = true;
     morphOpen = false;
-    // measure the pill's natural spot without painting it
+    // cover the log screen, swap to standings underneath, then shrink:
+    // the shrink reveals standings (the destination), never the log screen
     const fab = $('fab-log');
-    const main = $('s-main');
-    const wasHidden = main.classList.contains('hidden');
-    main.classList.remove('hidden');
-    main.style.visibility = 'hidden';
-    const r = fab.getBoundingClientRect();
-    main.classList.toggle('hidden', wasHidden);
-    main.style.visibility = '';
-    // cover the log screen, then shrink back into the button
     const c = morphClone({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }, fab.textContent);
     c.style.borderRadius = '0px'; c.style.background = 'var(--bg)';
     c.style.color = 'transparent'; c.style.boxShadow = 'none'; c.style.opacity = '0';
@@ -495,6 +489,8 @@
     void c.offsetWidth;
     c.style.opacity = '1';
     setTimeout(() => {
+      enterMain('standings');
+      const r = fab.getBoundingClientRect();
       c.style.transition = 'all .45s ' + MORPH_EASE;
       c.style.left = r.left + 'px'; c.style.top = r.top + 'px';
       c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
@@ -503,7 +499,6 @@
       setTimeout(() => {
         c.remove();
         morphRunning = false;
-        enterMain('standings');
       }, 470);
     }, 220);
   }
