@@ -235,6 +235,7 @@
 
   // ---------- MAIN ----------
   function enterMain(tab) {
+    morphOpen = false;
     show('s-main');
     switchTab(tab || 'standings');
   }
@@ -325,7 +326,7 @@
       fab.onclick = () => { Store.startNextSeason(); enterMain('standings'); };
     } else {
       fab.textContent = 'Log Game ' + (season.games.length + 1);
-      fab.onclick = () => openLog();
+      fab.onclick = () => openLogMorph();
     }
     $('cal-logbtn').textContent = locked ? 'Season locked' : 'Log Game ' + (season.games.length + 1);
 
@@ -433,6 +434,78 @@
     // first log ever: leave the optional stats open so new users discover them
     if (st.seasons.flatMap(s => s.games).length === 0) $('log-opts').classList.remove('hidden');
     show('s-log');
+  }
+
+  // ---------- FAB MORPH: the log button grows into its screen ----------
+  let morphOpen = false;
+  let morphRunning = false;
+  const MORPH_EASE = 'cubic-bezier(.32,.72,0,1)';
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  function morphClone(rect, text) {
+    const c = document.createElement('div');
+    c.className = 'morph-clone';
+    c.textContent = text;
+    c.style.left = rect.left + 'px';
+    c.style.top = rect.top + 'px';
+    c.style.width = rect.width + 'px';
+    c.style.height = rect.height + 'px';
+    document.body.appendChild(c);
+    return c;
+  }
+  function openLogMorph() {
+    if (morphRunning || reducedMotion()) { openLog(); return; }
+    morphRunning = true;
+    const fab = $('fab-log');
+    const c = morphClone(fab.getBoundingClientRect(), fab.textContent);
+    c.style.transition = 'all .45s ' + MORPH_EASE;
+    void c.offsetWidth;
+    c.style.left = '0px'; c.style.top = '0px';
+    c.style.width = '100vw'; c.style.height = '100dvh';
+    c.style.borderRadius = '0px'; c.style.background = 'var(--bg)';
+    c.style.color = 'transparent'; c.style.boxShadow = 'none';
+    setTimeout(() => {
+      openLog();
+      morphOpen = !$('s-log').classList.contains('hidden');
+      c.style.transition = 'opacity .2s ease';
+      c.style.opacity = '0';
+      setTimeout(() => { c.remove(); morphRunning = false; }, 220);
+    }, 470);
+  }
+  function closeLogMorph() {
+    $('picker-back').classList.remove('open');
+    if (!morphOpen || morphRunning || reducedMotion()) { morphOpen = false; show('s-main'); return; }
+    morphRunning = true;
+    morphOpen = false;
+    // measure the pill's natural spot without painting it
+    const fab = $('fab-log');
+    const main = $('s-main');
+    const wasHidden = main.classList.contains('hidden');
+    main.classList.remove('hidden');
+    main.style.visibility = 'hidden';
+    const r = fab.getBoundingClientRect();
+    main.classList.toggle('hidden', wasHidden);
+    main.style.visibility = '';
+    // cover the log screen, then shrink back into the button
+    const c = morphClone({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }, fab.textContent);
+    c.style.borderRadius = '0px'; c.style.background = 'var(--bg)';
+    c.style.color = 'transparent'; c.style.boxShadow = 'none'; c.style.opacity = '0';
+    c.style.transition = 'opacity .2s ease';
+    void c.offsetWidth;
+    c.style.opacity = '1';
+    setTimeout(() => {
+      c.style.transition = 'all .45s ' + MORPH_EASE;
+      c.style.left = r.left + 'px'; c.style.top = r.top + 'px';
+      c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
+      c.style.borderRadius = '28px'; c.style.background = 'var(--pod)';
+      c.style.color = 'var(--on-blue)'; c.style.boxShadow = '0 6px 20px rgba(0,0,0,.25)';
+      setTimeout(() => {
+        c.remove();
+        morphRunning = false;
+        enterMain('standings');
+      }, 470);
+    }, 220);
   }
 
   function renderLogPlayers() {
@@ -1067,10 +1140,11 @@
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
     $$('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+    $('log-back').onclick = () => closeLogMorph();
     $$('#folder-tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
     $('btn-create-pod').onclick = () => { show('s-c1'); };
     $('c4-start').onclick = commitCreate;
-    $('fab-log').onclick = openLog;
+    $('fab-log').onclick = openLogMorph;
     $('st-allgames').onclick = () => { renderGames(); show('s-games'); };
     $('pp-close').onclick = () => $('ov-player').classList.remove('open');
     $('ov-player').onclick = e => { if (e.target.id === 'ov-player') $('ov-player').classList.remove('open'); };

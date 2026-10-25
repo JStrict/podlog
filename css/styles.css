@@ -30,9 +30,16 @@
 html, body { margin: 0; padding: 0; }
 body {
   font-family: var(--font);
-  background: #0a0a0c;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+}
+/* FAB morph clone: the log button growing into its screen */
+.morph-clone {
+  position: fixed; z-index: 50; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font); font-size: 16px; font-weight: 700;
+  background: var(--pod); color: var(--on-blue); border-radius: 28px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25); pointer-events: none; margin: 0; white-space: nowrap;
 }
 #app {
   max-width: 430px;
