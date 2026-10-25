@@ -402,6 +402,8 @@
     renderLogPlayers();
     renderLogSlots();
     renderLogOpts();
+    // first log ever: leave the optional stats open so new users discover them
+    if (st.seasons.flatMap(s => s.games).length === 0) $('log-opts').classList.remove('hidden');
     show('s-log');
   }
 
