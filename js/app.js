@@ -307,7 +307,7 @@
       lb.innerHTML = '<b>Season complete.</b> Time to crown a champion.<br>' +
         '<button class="btn-primary" id="lb-lock" style="padding:10px 18px;font-size:14px">Crown the champion</button>' +
         (season.type === 'dates' ? ' <button class="btn-secondary" id="lb-extend" style="padding:10px 18px;font-size:14px">Extend 14 days</button>' : '');
-      $('lb-lock').onclick = () => { Store.lockSeason(season.id); renderSeasonEnd(season.id); show('s-end'); };
+      $('lb-lock').onclick = () => { Store.lockSeason(season.id); renderSeasonEnd(season.id); show('s-end'); showBackupNudge(season, 'lock'); };
       const ex = $('lb-extend');
       if (ex) ex.onclick = () => {
         const [y, m, d] = season.endDate.split('-').map(Number);
@@ -693,8 +693,10 @@
         const locked = Store.lockSeason(season.id);
         renderSeasonEnd(locked.id);
         show('s-end');
+        showBackupNudge(season, 'lock');
       } else {
         enterMain('standings');
+        showBackupNudge(season, 'half');
       }
     };
     $('confirm-edit').onclick = () => show('s-log');
@@ -918,6 +920,43 @@
   }
 
   // ---------- SETTINGS ----------
+  async function shareBackup() {
+    const json = Store.backupJSON();
+    const file = new File([json], 'podlog-backup.json', { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'PodLog backup' }); return; }
+      catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    download('podlog-backup.json', json, 'application/json');
+  }
+
+  // Backup nudge: once per season at the halfway mark, once at lock.
+  // Shown, not nagging: dismissing still counts as shown for that trigger.
+  function seasonAtHalfway(season) {
+    if (!season || season.status !== 'active') return false;
+    if (season.type === 'games') {
+      return !!season.gameCount && season.games.length >= Math.ceil(season.gameCount / 2);
+    }
+    if (season.type === 'dates' && season.startDate && season.endDate) {
+      const toMs = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+      return toMs(todayISO()) >= (toMs(season.startDate) + toMs(season.endDate)) / 2;
+    }
+    return false;
+  }
+
+  function showBackupNudge(season, kind) {
+    if (!season) return;
+    const flag = kind === 'lock' ? 'backupNudgeLock' : 'backupNudgeHalf';
+    if (season[flag]) return;
+    if (kind === 'half' && !seasonAtHalfway(season)) return;
+    season[flag] = true; Store.save();
+    $('backup-title').textContent = kind === 'lock' ? 'Season locked' : 'Halfway there';
+    $('backup-msg').textContent = kind === 'lock'
+      ? 'A full season of games lives on this phone. Save a backup copy to Files before you start the next one.'
+      : 'You are halfway through ' + season.name + '. Your season lives on this phone, so a backup is cheap insurance. Save a copy to Files?';
+    $('ov-backup').classList.add('open');
+  }
+
   function openActionSheet(p) {
     $('action-title').textContent = p.name;
     $('action-archive').onclick = () => {
@@ -1087,15 +1126,7 @@
       download('podlog-games.csv', gameLog, 'text/csv');
       download('podlog-standings.csv', standings, 'text/csv');
     };
-    $('set-backup').onclick = async () => {
-      const json = Store.backupJSON();
-      const file = new File([json], 'podlog-backup.json', { type: 'application/json' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: 'PodLog backup' }); return; }
-        catch (err) { if (err && err.name === 'AbortError') return; }
-      }
-      download('podlog-backup.json', json, 'application/json');
-    };
+    $('set-backup').onclick = shareBackup;
     $('set-restore').onclick = () => $('set-restore-file').click();
     $('set-restore-file').onchange = e => {
       const f = e.target.files[0]; if (!f) return;
@@ -1205,6 +1236,9 @@
     $('ov-entry').onclick = e => { if (e.target.id === 'ov-entry') $('ov-entry').classList.remove('open'); };
     $('action-cancel').onclick = () => $('ov-action').classList.remove('open');
     $('ov-action').onclick = e => { if (e.target.id === 'ov-action') $('ov-action').classList.remove('open'); };
+    $('backup-now').onclick = () => { $('ov-backup').classList.remove('open'); shareBackup(); };
+    $('backup-later').onclick = () => $('ov-backup').classList.remove('open');
+    $('ov-backup').onclick = e => { if (e.target.id === 'ov-backup') $('ov-backup').classList.remove('open'); };
     $('share-standings').onclick = shareStandings;
     $('share-hof').onclick = () => {
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);
@@ -1220,7 +1254,7 @@
 
     initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings();
 
-    if (Store.state.setupDone && Store.state.pod) enterMain('standings');
+    if (Store.state.setupDone && Store.state.pod) { enterMain('standings'); showBackupNudge(Store.activeSeason(), 'half'); }
     else show('s-first');
 
     // PWA service worker
