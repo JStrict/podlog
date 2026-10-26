@@ -1231,13 +1231,20 @@
     if (!src) return Promise.resolve(null);
     return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
   }
+  function inkOn(hex) {
+    const n = parseInt((hex || '#3E2FDC').slice(1), 16);
+    const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.6 ? '#111' : '#fff';
+  }
   function drawCard(title, sub, rows, opts) {
     opts = opts || {};
     const W = 1080, rowH = 88, H = 320 + rows.length * rowH + 80;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
     c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#3E2FDC'; c.fillRect(0, 0, W, 220);
+    const bandColor = (opts.header && opts.header.pod.color) || opts.bandColor || '#3E2FDC';
+    const ink = inkOn(bandColor);
+    c.fillStyle = bandColor; c.fillRect(0, 0, W, 220);
     if (opts.header) {
       const pod = opts.header.pod, mark = opts.header.markImg, icon = opts.header.iconImg;
       const cx = 120, cy = 110, r = 60;
@@ -1249,16 +1256,16 @@
       } else {
         c.fillStyle = pod.color || '#3E2FDC'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
         const label = pod.glyph || initials(pod.name);
-        c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillStyle = ink; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.font = '700 ' + (label.length > 1 ? 52 : 72) + 'px -apple-system, sans-serif';
         c.fillText(label, cx, cy + 2);
       }
       c.restore();
       let pname = pod.name || 'My Pod';
       if (pname.length > 16) pname = pname.slice(0, 15) + '…';
-      c.fillStyle = '#fff'; c.font = '800 64px -apple-system, sans-serif';
+      c.fillStyle = ink; c.font = '800 64px -apple-system, sans-serif';
       c.fillText(pname, 210, 118);
-      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
+      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = ink === '#fff' ? 'rgba(255,255,255,.85)' : 'rgba(17,17,17,.7)';
       c.fillText(opts.header.seasonName, 210, 178);
       if (mark) {
         c.save();
@@ -1267,9 +1274,9 @@
         c.restore();
       }
     } else {
-      c.fillStyle = '#fff'; c.font = '800 64px -apple-system, sans-serif';
+      c.fillStyle = ink; c.font = '800 64px -apple-system, sans-serif';
       c.fillText('PODLOG', 60, 105);
-      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
+      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = ink === '#fff' ? 'rgba(255,255,255,.85)' : 'rgba(17,17,17,.7)';
       c.fillText(title, 60, 165);
     }
     c.fillStyle = '#6e6e73'; c.font = '500 32px -apple-system, sans-serif';
@@ -1325,7 +1332,7 @@
     const st = Store.state;
     const champ = playerName(season.champion), spoon = playerName(season.woodenSpoon);
     const text = st.pod.name + ' — ' + season.name + ' FINAL\nChampion: ' + champ + '\nWooden spoon: ' + spoon;
-    drawCard(season.name + ' · FINAL', st.pod.name, [['♛', 'Champion: ' + champ], ['🥄', 'Wooden spoon: ' + spoon]])
+    drawCard(season.name + ' · FINAL', st.pod.name, [['♛', 'Champion: ' + champ], ['🥄', 'Wooden spoon: ' + spoon]], { bandColor: st.pod.color })
       .then(b => shareImage(b, 'podlog-champion.png', text));
   }
   function shareGame(g) {
@@ -1342,7 +1349,7 @@
       rows.map(r => r[0] + ' ' + r[1]).join('\n') +
       (elimParts.length ? '\n' + elimParts.join(' · ') : '') +
       (g.firstBlood ? '\nFirst blood: ' + playerName(g.firstBlood) : '');
-    drawCard('Game ' + g.number, st.pod.name + ' · ' + season.name + ' · ' + fmtDate(g.date), rows)
+    drawCard('Game ' + g.number, st.pod.name + ' · ' + season.name + ' · ' + fmtDate(g.date), rows, { bandColor: st.pod.color })
       .then(b => shareImage(b, 'podlog-game-' + g.number + '.png', text));
   }
 
@@ -1408,7 +1415,7 @@
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);
       const rows = hof.rows.slice(0, 6).map(r => ['•', r.label + ': ' + r.name + ' (' + r.value + ')']);
       const text = 'Hall of Fame\n' + rows.map(r => r[1]).join('\n');
-      drawCard('Hall of Fame', Store.state.pod.name, rows).then(b => shareImage(b, 'podlog-hof.png', text));
+      drawCard('Hall of Fame', Store.state.pod.name, rows, { bandColor: Store.state.pod.color }).then(b => shareImage(b, 'podlog-hof.png', text));
     };
 
     initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings();
