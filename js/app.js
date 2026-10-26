@@ -142,12 +142,8 @@
       av.innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name) === '?' ? String(i + 1) : p.name);
       av.title = 'Add photo';
       av.onclick = () => {
-        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-        inp.onchange = () => {
-          const f = inp.files[0]; if (!f) return;
-          openCropEditor(f, dataUrl => { p.photo = dataUrl; renderCreate2(); });
-        };
-        inp.click();
+        pendingAvatarSave = dataUrl => { p.photo = dataUrl; renderCreate2(); };
+        $('set-avatar-file').click();
       };
       const nm = document.createElement('input'); nm.className = 'field'; nm.placeholder = 'Player ' + (i + 1); nm.value = p.name;
       nm.oninput = () => { p.name = nm.value; };
@@ -930,6 +926,9 @@
   // ---- Photo crop editor: drag to move, pinch or slider to zoom, square
   // export (displays as a circle via the avatar CSS). Used by every photo
   // upload: pod icon and player photos, setup and Settings.
+  // Player photos share one persistent picker input: iOS drops picks from
+  // inputs created on the fly, which made new uploads flaky.
+  let pendingAvatarSave = null;
   const cropState = { img: null, url: null, onSave: null, W: 0, H: 0, S: 0, zoom: 1, ox: 0, oy: 0, pointers: new Map(), pinchD: 0, pinchZoom: 1 };
   function cropBaseScale() { return Math.max(cropState.S / cropState.W, cropState.S / cropState.H); }
   function cropScale() { return cropBaseScale() * cropState.zoom; }
@@ -1132,12 +1131,8 @@
       const av = document.createElement('button'); av.className = 'avatar'; av.title = 'Change photo';
       av.innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name));
       av.onclick = () => {
-        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-        inp.onchange = () => {
-          const f = inp.files[0]; if (!f) return;
-          openCropEditor(f, dataUrl => { p.photo = dataUrl; Store.save(); renderSettings(); });
-        };
-        inp.click();
+        pendingAvatarSave = dataUrl => { p.photo = dataUrl; Store.save(); renderSettings(); };
+        $('set-avatar-file').click();
       };
       const nm = document.createElement('input'); nm.className = 'field'; nm.value = p.name; nm.placeholder = 'Name';
       nm.onchange = () => { p.name = nm.value.trim() || p.name; Store.save(); renderSettings(); };
@@ -1325,6 +1320,14 @@
     $('backup-later').onclick = () => $('ov-backup').classList.remove('open');
     $('ov-backup').onclick = e => { if (e.target.id === 'ov-backup') $('ov-backup').classList.remove('open'); };
     $('crop-cancel').onclick = closeCropEditor;
+    $('set-avatar-file').onchange = e => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      const cb = pendingAvatarSave; pendingAvatarSave = null;
+      if (!f || !cb) return;
+      openCropEditor(f, cb);
+    };
+    $('set-avatar-file').addEventListener('cancel', () => { pendingAvatarSave = null; });
     $('crop-save').onclick = () => {
       const cb = cropState.onSave;
       const url = cropExport();
