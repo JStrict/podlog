@@ -111,13 +111,12 @@
     $('c1-upload').onclick = () => $('c1-file').click();
     $('c1-file').onchange = e => {
       const f = e.target.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        draft.iconDataUrl = r.result; draft.glyph = null;
+      openCropEditor(f, dataUrl => {
+        draft.iconDataUrl = dataUrl; draft.glyph = null;
         $('c1-upload').classList.add('sel'); $('c1-generic').classList.remove('sel');
         gg.classList.add('hidden');
-      };
-      r.readAsDataURL(f);
+      });
+      e.target.value = '';
     };
     $('c1-continue').onclick = () => {
       draft.name = $('c1-name').value.trim() || 'My Pod';
@@ -146,9 +145,7 @@
         const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
         inp.onchange = () => {
           const f = inp.files[0]; if (!f) return;
-          const r = new FileReader();
-          r.onload = () => { p.photo = r.result; renderCreate2(); };
-          r.readAsDataURL(f);
+          openCropEditor(f, dataUrl => { p.photo = dataUrl; renderCreate2(); });
         };
         inp.click();
       };
@@ -930,6 +927,97 @@
     download('podlog-backup.json', json, 'application/json');
   }
 
+  // ---- Photo crop editor: drag to move, pinch or slider to zoom, square
+  // export (displays as a circle via the avatar CSS). Used by every photo
+  // upload: pod icon and player photos, setup and Settings.
+  const cropState = { img: null, url: null, onSave: null, W: 0, H: 0, S: 0, zoom: 1, ox: 0, oy: 0, pointers: new Map(), pinchD: 0, pinchZoom: 1 };
+  function cropBaseScale() { return Math.max(cropState.S / cropState.W, cropState.S / cropState.H); }
+  function cropScale() { return cropBaseScale() * cropState.zoom; }
+  function cropClamp() {
+    const s = cropScale();
+    const mx = Math.max(0, (cropState.W * s - cropState.S) / 2);
+    const my = Math.max(0, (cropState.H * s - cropState.S) / 2);
+    cropState.ox = Math.min(mx, Math.max(-mx, cropState.ox));
+    cropState.oy = Math.min(my, Math.max(-my, cropState.oy));
+  }
+  function cropRender() {
+    const st = cropState, s = cropScale(), img = $('crop-img');
+    img.style.width = (st.W * s) + 'px';
+    img.style.height = (st.H * s) + 'px';
+    img.style.transform = 'translate(' + ((st.S - st.W * s) / 2 + st.ox) + 'px,' + ((st.S - st.H * s) / 2 + st.oy) + 'px)';
+    $('crop-zoom').value = Math.round((st.zoom - 1) / 3 * 100);
+  }
+  function openCropEditor(file, onSave) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      cropState.img = img; cropState.url = url; cropState.onSave = onSave;
+      cropState.W = img.naturalWidth; cropState.H = img.naturalHeight;
+      cropState.zoom = 1; cropState.ox = 0; cropState.oy = 0;
+      $('crop-img').src = url;
+      $('ov-crop').classList.add('open');
+      requestAnimationFrame(() => {
+        cropState.S = $('crop-stage').clientWidth;
+        if (!cropState.S) return;
+        cropClamp(); cropRender();
+      });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load that photo.'); };
+    img.src = url;
+  }
+  function closeCropEditor() {
+    $('ov-crop').classList.remove('open');
+    if (cropState.url) URL.revokeObjectURL(cropState.url);
+    cropState.url = null; cropState.img = null; cropState.onSave = null;
+    cropState.pointers.clear(); cropState.pinchD = 0;
+  }
+  function cropExport() {
+    const st = cropState, s = cropScale();
+    const left = (st.S - st.W * s) / 2 + st.ox, top = (st.S - st.H * s) / 2 + st.oy;
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+    c.getContext('2d').drawImage(st.img, (0 - left) / s, (0 - top) / s, st.S / s, st.S / s, 0, 0, 512, 512);
+    return c.toDataURL('image/jpeg', 0.85);
+  }
+  function cropPointerDown(e) {
+    if (!cropState.img) return;
+    e.preventDefault();
+    $('crop-stage').setPointerCapture(e.pointerId);
+    cropState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (cropState.pointers.size === 2) {
+      const [a, b] = [...cropState.pointers.values()];
+      cropState.pinchD = Math.hypot(a.x - b.x, a.y - b.y);
+      cropState.pinchZoom = cropState.zoom;
+    }
+  }
+  function cropPointerMove(e) {
+    if (!cropState.pointers.has(e.pointerId)) return;
+    e.preventDefault();
+    const prev = cropState.pointers.get(e.pointerId);
+    cropState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (cropState.pointers.size === 1) {
+      cropState.ox += e.clientX - prev.x;
+      cropState.oy += e.clientY - prev.y;
+      cropClamp(); cropRender();
+    } else if (cropState.pointers.size === 2 && cropState.pinchD > 0) {
+      const [a, b] = [...cropState.pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const rect = $('crop-stage').getBoundingClientRect();
+      const stageX = (a.x + b.x) / 2 - rect.left, stageY = (a.y + b.y) / 2 - rect.top;
+      const s0 = cropBaseScale() * cropState.pinchZoom;
+      const px = (stageX - (cropState.S - cropState.W * s0) / 2 - cropState.ox) / s0;
+      const py = (stageY - (cropState.S - cropState.H * s0) / 2 - cropState.oy) / s0;
+      cropState.zoom = Math.min(4, Math.max(1, cropState.pinchZoom * d / cropState.pinchD));
+      const s1 = cropScale();
+      cropState.ox = stageX - (cropState.S - cropState.W * s1) / 2 - px * s1;
+      cropState.oy = stageY - (cropState.S - cropState.H * s1) / 2 - py * s1;
+      cropClamp(); cropRender();
+    }
+  }
+  function cropPointerUp(e) {
+    cropState.pointers.delete(e.pointerId);
+    if (cropState.pointers.size < 2) cropState.pinchD = 0;
+  }
+
   // Backup nudge: once per season at the halfway mark, once at lock.
   // Shown, not nagging: dismissing still counts as shown for that trigger.
   function seasonAtHalfway(season) {
@@ -1047,9 +1135,7 @@
         const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
         inp.onchange = () => {
           const f = inp.files[0]; if (!f) return;
-          const r = new FileReader();
-          r.onload = () => { p.photo = r.result; Store.save(); renderSettings(); };
-          r.readAsDataURL(f);
+          openCropEditor(f, dataUrl => { p.photo = dataUrl; Store.save(); renderSettings(); });
         };
         inp.click();
       };
@@ -1111,9 +1197,8 @@
     $('set-podicon-upload').onclick = () => $('set-podicon-file').click();
     $('set-podicon-file').onchange = e => {
       const f = e.target.files[0]; if (!f || !Store.state.pod) return;
-      const r = new FileReader();
-      r.onload = () => { Store.state.pod.iconDataUrl = r.result; Store.state.pod.glyph = null; Store.save(); };
-      r.readAsDataURL(f);
+      openCropEditor(f, dataUrl => { Store.state.pod.iconDataUrl = dataUrl; Store.state.pod.glyph = null; Store.save(); renderStandings(); });
+      e.target.value = '';
     };
     $('set-podicon-glyph').onclick = () => $('set-podglyphs').classList.toggle('hidden');
     $('set-remind').onchange = e => { Store.state.settings.remind = e.target.checked; Store.save(); };
@@ -1239,6 +1324,34 @@
     $('backup-now').onclick = () => { $('ov-backup').classList.remove('open'); shareBackup(); };
     $('backup-later').onclick = () => $('ov-backup').classList.remove('open');
     $('ov-backup').onclick = e => { if (e.target.id === 'ov-backup') $('ov-backup').classList.remove('open'); };
+    $('crop-cancel').onclick = closeCropEditor;
+    $('crop-save').onclick = () => {
+      const cb = cropState.onSave;
+      const url = cropExport();
+      closeCropEditor();
+      if (cb) cb(url);
+    };
+    $('crop-zoom').oninput = e => {
+      cropState.zoom = 1 + (e.target.value / 100) * 3;
+      cropClamp(); cropRender();
+    };
+    const cStage = $('crop-stage');
+    cStage.addEventListener('pointerdown', cropPointerDown);
+    cStage.addEventListener('pointermove', cropPointerMove);
+    cStage.addEventListener('pointerup', cropPointerUp);
+    cStage.addEventListener('pointercancel', cropPointerUp);
+    cStage.addEventListener('wheel', e => {
+      if (!cropState.img) return;
+      e.preventDefault();
+      cropState.zoom = Math.min(4, Math.max(1, cropState.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
+      cropClamp(); cropRender();
+    }, { passive: false });
+    window.addEventListener('resize', () => {
+      if ($('ov-crop').classList.contains('open') && cropState.img) {
+        cropState.S = $('crop-stage').clientWidth;
+        cropClamp(); cropRender();
+      }
+    });
     $('share-standings').onclick = shareStandings;
     $('share-hof').onclick = () => {
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);

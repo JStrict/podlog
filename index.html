@@ -205,7 +205,7 @@
         <button class="btn-secondary btn-block mt" id="set-backup">Share backup (save to Files)</button>
         <button class="btn-secondary btn-block mt" id="set-restore">Restore from backup</button>
         <input type="file" id="set-restore-file" accept="application/json" class="hidden">
-        <p class="about muted" id="set-about">PodLog · v1.21a · © 2026</p>
+        <p class="about muted" id="set-about">PodLog · 1.22.0 · © 2026</p>
       </div>
     </div>
     </div>
@@ -355,6 +355,23 @@
       <p class="muted" id="backup-msg"></p>
       <button class="btn-primary btn-block mt" id="backup-now">Back up to Files</button>
       <button class="btn-secondary btn-block mt" id="backup-later">Not now</button>
+    </div>
+  </div>
+
+  <!-- ============ PHOTO CROP EDITOR ============ -->
+  <div class="crop-overlay" id="ov-crop">
+    <div class="crop-wrap">
+      <div class="crop-top">
+        <button class="btn-secondary" id="crop-cancel">Cancel</button>
+        <h3>Adjust photo</h3>
+        <button class="btn-primary" id="crop-save">Save</button>
+      </div>
+      <div class="crop-stage" id="crop-stage">
+        <img id="crop-img" draggable="false" alt="">
+        <div class="crop-mask"></div>
+      </div>
+      <input type="range" id="crop-zoom" min="0" max="100" value="0">
+      <p class="muted crop-hint">Drag to move · Pinch or use the slider to zoom</p>
     </div>
   </div>
 

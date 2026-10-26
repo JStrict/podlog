@@ -186,6 +186,29 @@ h2 { font-size: 22px; margin: 0; }
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; overflow: hidden;
 }
 .pod-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+/* photo crop editor */
+.crop-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  visibility: hidden; padding: 20px;
+}
+.crop-overlay.open { visibility: visible; }
+.crop-wrap { width: min(92vw, 380px); }
+.crop-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.crop-top h3 { margin: 0; font-size: 18px; }
+.crop-top button { padding: 10px 18px; }
+.crop-stage {
+  position: relative; width: 100%; aspect-ratio: 1; overflow: hidden;
+  background: #000; border-radius: 12px; touch-action: none;
+}
+.crop-stage img { position: absolute; left: 0; top: 0; }
+.crop-mask {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  border: 2px solid rgba(255,255,255,.9); box-shadow: 0 0 0 999px rgba(0,0,0,.55);
+}
+#crop-zoom { width: 100%; margin-top: 18px; accent-color: var(--blue); }
+.crop-hint { text-align: center; font-size: 13px; margin-top: 10px; }
 .pod-head h2 { font-size: 19px; }
 .pod-head .muted { margin: 2px 0 0; font-size: 13px; }
 .share-btn {
