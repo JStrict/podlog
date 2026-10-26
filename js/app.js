@@ -1227,25 +1227,66 @@
   }
 
   // ---------- SHARE (image cards) ----------
-  function drawCard(title, sub, rows) {
+  function loadImg(src) {
+    if (!src) return Promise.resolve(null);
+    return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  }
+  function drawCard(title, sub, rows, opts) {
+    opts = opts || {};
     const W = 1080, rowH = 88, H = 320 + rows.length * rowH + 80;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
     c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
     c.fillStyle = '#3E2FDC'; c.fillRect(0, 0, W, 220);
-    c.fillStyle = '#fff'; c.font = '800 64px -apple-system, sans-serif';
-    c.fillText('PODLOG', 60, 105);
-    c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
-    c.fillText(title, 60, 165);
+    if (opts.header) {
+      const pod = opts.header.pod, mark = opts.header.markImg, icon = opts.header.iconImg;
+      const cx = 120, cy = 110, r = 60;
+      c.save();
+      c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.clip();
+      if (icon) {
+        const s = Math.min(icon.width, icon.height);
+        c.drawImage(icon, (icon.width - s) / 2, (icon.height - s) / 2, s, s, cx - r, cy - r, r * 2, r * 2);
+      } else {
+        c.fillStyle = pod.color || '#3E2FDC'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+        const label = pod.glyph || initials(pod.name);
+        c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = '700 ' + (label.length > 1 ? 52 : 72) + 'px -apple-system, sans-serif';
+        c.fillText(label, cx, cy + 2);
+      }
+      c.restore();
+      let pname = pod.name || 'My Pod';
+      if (pname.length > 16) pname = pname.slice(0, 15) + '…';
+      c.fillStyle = '#fff'; c.font = '800 64px -apple-system, sans-serif';
+      c.fillText(pname, 210, 118);
+      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
+      c.fillText(opts.header.seasonName, 210, 178);
+      if (mark) {
+        c.save();
+        roundRect(c, W - 60 - 110, 55, 110, 110, 20); c.clip();
+        c.drawImage(mark, W - 60 - 110, 55, 110, 110);
+        c.restore();
+      }
+    } else {
+      c.fillStyle = '#fff'; c.font = '800 64px -apple-system, sans-serif';
+      c.fillText('PODLOG', 60, 105);
+      c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
+      c.fillText(title, 60, 165);
+    }
     c.fillStyle = '#6e6e73'; c.font = '500 32px -apple-system, sans-serif';
     c.fillText(sub, 60, 275);
+    const colX = [70, 230, 565, 695, 835, 975];
     rows.forEach((r, i) => {
       const y = 340 + i * rowH;
       if (i === 0) { c.fillStyle = '#e5f4e9'; roundRect(c, 40, y - 58, W - 80, rowH - 8, 18); c.fill(); }
-      c.fillStyle = '#111'; c.font = '700 38px -apple-system, sans-serif';
-      c.fillText(r[0], 70, y);
-      c.font = '500 36px -apple-system, sans-serif';
-      c.fillText(r[1], 420, y);
+      c.fillStyle = '#111';
+      if (r.length > 2) {
+        r.forEach((cell, j) => { c.font = j === 0 ? '700 38px -apple-system, sans-serif' : '500 36px -apple-system, sans-serif'; c.fillText(cell, colX[j], y); });
+      } else {
+        c.font = '700 38px -apple-system, sans-serif';
+        c.fillText(r[0], 70, y);
+        c.font = '500 36px -apple-system, sans-serif';
+        c.fillText(r[1], 420, y);
+      }
     });
     return new Promise(res => cv.toBlob(res, 'image/png'));
   }
@@ -1265,12 +1306,19 @@
     try { await navigator.clipboard.writeText(textFallback); alert('Copied to clipboard.'); }
     catch (e) { alert(textFallback); }
   }
-  function shareStandings() {
+  async function shareStandings() {
     const st = Store.state; const season = Store.activeSeason(); if (!season) return;
     const t = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
-    const rows = t.ranked.slice(0, 6).map((p, i) => [(i + 1) + '.', p.name + '  ' + S.fmtWL(p) + '  ' + S.fmtPct(p.winPct)]);
-    const text = st.pod.name + ' — ' + season.name + '\n' + rows.map(r => r[0] + ' ' + r[1]).join('\n');
-    drawCard(st.pod.name + ' · ' + season.name, 'Game ' + season.games.length + (season.type === 'games' ? ' of ' + season.gameCount : ''), rows)
+    const rows = t.ranked.slice(0, 6).map((p, i) => {
+      const name = p.name.length > 15 ? p.name.slice(0, 14) + '…' : p.name;
+      const streak = p.streakDir ? p.streakDir + p.streak : '—';
+      return [(i + 1) + '.', name, S.fmtWL(p), S.fmtPct(p.winPct), p.points + ' pts', streak];
+    });
+    const text = st.pod.name + ' — ' + season.name + '\n' + rows.map(r => r.join('  ')).join('\n');
+    const iconImg = await loadImg(st.pod.iconDataUrl);
+    const markImg = await loadImg('./assets/icon-tile.jpg');
+    drawCard('', 'Game ' + season.games.length + (season.type === 'games' ? ' of ' + season.gameCount : ''), rows,
+      { header: { pod: st.pod, seasonName: season.name, iconImg, markImg } })
       .then(b => shareImage(b, 'podlog-standings.png', text));
   }
   function shareEnd(season) {
@@ -1361,11 +1409,6 @@
       const rows = hof.rows.slice(0, 6).map(r => ['•', r.label + ': ' + r.name + ' (' + r.value + ')']);
       const text = 'Hall of Fame\n' + rows.map(r => r[1]).join('\n');
       drawCard('Hall of Fame', Store.state.pod.name, rows).then(b => shareImage(b, 'podlog-hof.png', text));
-    };
-    $('share-cal').onclick = () => {
-      const text = Store.state.pod.name + ' — ' + $('cal-month').textContent;
-      if (navigator.share) navigator.share({ text }).catch(() => {});
-      else alert(text);
     };
 
     initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings();
