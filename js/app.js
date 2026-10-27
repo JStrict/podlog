@@ -385,7 +385,7 @@
   }
 
   // ---------- LOG GAME ----------
-  const logDraft = { count: 0, players: [], slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elimBy: {} };
+  const logDraft = { count: 0, players: [], slots: [], date: '', firstBlood: '', turns: '', colors: {}, decks: {}, elimBy: {}, scoops: [] };
   const MANA = ['W', 'U', 'B', 'R', 'G', 'C'];
 
   function openLog(editId) {
@@ -406,6 +406,7 @@
       logDraft.colors = Object.assign({}, g.colors);
       logDraft.decks = Object.assign({}, g.decks);
       logDraft.elimBy = Object.assign({}, g.eliminatedBy);
+      logDraft.scoops = (g.scooped || []).slice();
       $('log-title').textContent = 'Edit Game ' + g.number;
       $('log-review').textContent = 'Review changes';
     } else {
@@ -413,7 +414,7 @@
       logDraft.count = logDraft.players.length;
       logDraft.slots = new Array(logDraft.count).fill(null);
       logDraft.date = todayISO();
-      logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elimBy = {};
+      logDraft.firstBlood = ''; logDraft.turns = ''; logDraft.colors = {}; logDraft.decks = {}; logDraft.elimBy = {}; logDraft.scoops = [];
       $('log-title').textContent = 'Log Game ' + (season.games.length + 1);
       $('log-review').textContent = 'Review';
     }
@@ -518,6 +519,7 @@
       if (logDraft.slots.length > logDraft.players.length) logDraft.slots.length = logDraft.players.length;
       while (logDraft.slots.length < logDraft.players.length) logDraft.slots.push(null);
       delete logDraft.colors[pid]; delete logDraft.decks[pid]; delete logDraft.elimBy[pid];
+      logDraft.scoops = logDraft.scoops.filter(id => id !== pid);
       Object.keys(logDraft.elimBy).forEach(v => { if (logDraft.elimBy[v] === pid) delete logDraft.elimBy[v]; });
       if (logDraft.firstBlood === pid) logDraft.firstBlood = '';
     } else {
@@ -583,7 +585,7 @@
       if (logDraft.slots[0] === id) return; // winner was not eliminated
       html += '<div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span class="muted" style="font-size:13px;flex:1">' + esc(playerName(id)) + '</span>' +
         '<select class="field" data-elimby="' + id + '" style="flex:2;padding:10px 12px;font-size:14px"><option value="">—</option>' +
-        people.filter(x => x !== id).map(x => '<option value="' + x + '"' + (logDraft.elimBy[id] === x ? ' selected' : '') + '>' + esc(playerName(x)) + '</option>').join('') + '</select></div>';
+        people.filter(x => x !== id).map(x => '<option value="' + x + '"' + (logDraft.elimBy[id] === x ? ' selected' : '') + '>' + esc(playerName(x)) + '</option>').join('') + '<option value="__scooped__"' + (logDraft.scoops.includes(id) ? ' selected' : '') + '>Scooped</option></select></div>';
     });
     wrap.innerHTML = html;
     const fbSel = wrap.querySelector('#opt-fb');
@@ -599,8 +601,10 @@
     });
     $$('#log-opts [data-deck]').forEach(i => { clearable(i); i.oninput = () => { logDraft.decks[i.dataset.deck] = i.value; }; });
     $$('#log-opts [data-elimby]').forEach(sel => sel.onchange = () => {
-      if (sel.value) logDraft.elimBy[sel.dataset.elimby] = sel.value;
-      else delete logDraft.elimBy[sel.dataset.elimby];
+      const vid = sel.dataset.elimby;
+      if (sel.value === '__scooped__') { delete logDraft.elimBy[vid]; if (!logDraft.scoops.includes(vid)) logDraft.scoops.push(vid); }
+      else if (sel.value) { logDraft.elimBy[vid] = sel.value; logDraft.scoops = logDraft.scoops.filter(id => id !== vid); }
+      else { delete logDraft.elimBy[vid]; logDraft.scoops = logDraft.scoops.filter(id => id !== vid); }
     });
   }
 
@@ -645,6 +649,12 @@
       const k = logDraft.elimBy[pid];
       if (k && k !== pid && logDraft.slots.includes(k)) elimBy[pid] = k;
     });
+    // scoops: explicitly chosen only, never an eliminator, never counted as a kill
+    const scooped = [];
+    logDraft.slots.forEach((pid, i) => {
+      if (i === 0) return; // winner was not eliminated
+      if (logDraft.scoops.includes(pid) && !elimBy[pid]) scooped.push(pid);
+    });
     const game = {
       date: logDraft.date, placements: logDraft.slots.slice(),
       firstBlood: logDraft.firstBlood || null,
@@ -653,6 +663,7 @@
       decks: Object.assign({}, logDraft.decks),
       eliminatedBy: elimBy,
     };
+    if (scooped.length) game.scooped = scooped;
     // editing a legacy count-only game without touching eliminators: keep its counts
     if (editing && !Object.keys(elimBy).length) {
       const orig = season.games.find(g => g.id === logDraft.editingId);
@@ -877,6 +888,7 @@
     const season = Store.activeSeason();
     $('pp-avatar').innerHTML = p.photo ? '<img src="' + p.photo + '">' : esc(initials(p.name));
     $('pp-name').textContent = p.name;
+    $('pp-share').onclick = () => sharePlayer(pid);
     $('pp-nick').textContent = p.nickname ? '"' + p.nickname + '"' : '';
     if (season) {
       $('pp-season-h').textContent = season.name;
@@ -900,6 +912,44 @@
         (elimBy ? '<p class="kv">Eliminated by <b>' + elimBy + '</b></p>' : '');
     }
     $('ov-player').classList.add('open');
+  }
+
+  async function sharePlayer(pid) {
+    const st = Store.state;
+    const p = st.players.find(x => x.id === pid); if (!p) return;
+    const season = Store.activeSeason();
+    const rows = [];
+    let context = st.pod.name;
+    if (season) {
+      const s = S.playerStats(pid, season.games);
+      const t = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
+      const all = t.ranked.concat(t.unranked || []);
+      const rank = all.findIndex(x => x.id === pid);
+      rows.push(['Season record', S.fmtWL(s) + ' · ' + S.fmtPct(s.winPct)]);
+      rows.push(['Season points', s.points + ' pts']);
+      if (rank >= 0) {
+        const n = rank + 1;
+        const ord = n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th');
+        rows.push(['Season rank', ord + ' of ' + all.length]);
+      }
+      rows.push(['Streak', s.streak ? s.streakDir + s.streak : '—']);
+      context = st.pod.name + ' · ' + season.name;
+    }
+    const allGames = st.seasons.flatMap(se => se.games);
+    const c = S.playerStats(pid, allGames);
+    const chips = st.seasons.filter(se => se.champion === pid).length;
+    rows.push(['Career record', S.fmtWL(c) + ' · ' + S.fmtPct(c.winPct)]);
+    rows.push(['Championships', String(chips)]);
+    rows.push(['Eliminations', String(c.eliminations)]);
+    rows.push(['First bloods', String(c.firstBloods)]);
+    const text = p.name + ' — ' + context + '\n' + rows.map(r => r[0] + ': ' + r[1]).join('\n');
+    const photoImg = await loadImg(p.photo);
+    const markImg = await loadImg('./assets/icon-tile.png');
+    let ctx = context; if (ctx.length > 30) ctx = ctx.slice(0, 29) + '…';
+    const slug = (p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'player');
+    drawCard('', '', rows,
+      { header: { pod: { name: p.name, color: st.pod.color }, seasonName: ctx, iconImg: photoImg, markImg }, noHighlight: true })
+      .then(b => shareImage(b, 'podlog-player-' + slug + '.png', text));
   }
 
   // ---------- HOF ----------
@@ -1238,7 +1288,7 @@
   }
   async function drawCard(title, sub, rows, opts) {
     opts = opts || {};
-    const W = 1080, rowH = 88, H = 320 + rows.length * rowH + 80;
+    const W = 1080, rowH = opts.rowH || 88, H = 320 + rows.length * rowH + 80;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
     c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
@@ -1286,18 +1336,25 @@
     }
     c.fillStyle = '#6e6e73'; c.font = '500 32px -apple-system, sans-serif';
     c.fillText(sub, 60, 275);
-    const colX = [70, 230, 565, 695, 835, 975];
+    const cols = opts.colX || [70, 230, 565, 695, 835, 975];
     rows.forEach((r, i) => {
       const y = 340 + i * rowH;
-      if (i === 0) { c.fillStyle = '#e5f4e9'; roundRect(c, 40, y - 58, W - 80, rowH - 8, 18); c.fill(); }
+      if (i === 0 && !opts.noHighlight) { c.fillStyle = '#e5f4e9'; roundRect(c, 40, y - 58, W - 80, rowH - 8, 18); c.fill(); }
       c.fillStyle = '#111';
       if (r.length > 2) {
-        r.forEach((cell, j) => { c.font = j === 0 ? '700 38px -apple-system, sans-serif' : '500 36px -apple-system, sans-serif'; c.fillText(cell, colX[j], y); });
+        r.forEach((cell, j) => {
+          const last = j === r.length - 1;
+          c.font = (j === 0 || (opts.boldLast && last)) ? '700 38px -apple-system, sans-serif' : '500 36px -apple-system, sans-serif';
+          if (opts.rightLast && last) { c.textAlign = 'right'; c.fillText(cell, 1020, y); c.textAlign = 'left'; }
+          else c.fillText(cell, cols[j], y);
+        });
       } else {
         c.font = '700 38px -apple-system, sans-serif';
         c.fillText(r[0], 70, y);
         c.font = '500 36px -apple-system, sans-serif';
         c.fillText(r[1], 420, y);
+        const sub = opts.subLines && opts.subLines[i];
+        if (sub) { c.fillStyle = '#6e6e73'; c.font = '500 28px -apple-system, sans-serif'; c.fillText(sub, 420, y + 38); }
       }
     });
     return new Promise(res => cv.toBlob(res, 'image/png'));
@@ -1333,14 +1390,23 @@
       { header: { pod: st.pod, seasonName: season.name, iconImg, markImg } })
       .then(b => shareImage(b, 'podlog-standings.png', text));
   }
-  function shareEnd(season) {
+  async function shareEnd(season) {
     const st = Store.state;
     const champ = playerName(season.champion), spoon = playerName(season.woodenSpoon);
     const text = st.pod.name + ' — ' + season.name + ' FINAL\nChampion: ' + champ + '\nWooden spoon: ' + spoon;
-    drawCard(season.name + ' · FINAL', st.pod.name, [['♛', 'Champion: ' + champ], ['🥄', 'Wooden spoon: ' + spoon]], { bandColor: st.pod.color })
+    const t = S.computeStandings(S.seasonPlayers(st.players, season), season.games);
+    const rows = t.ranked.concat(t.unranked || []).map((p, i) => {
+      const name = p.name.length > 15 ? p.name.slice(0, 14) + '…' : p.name;
+      const streak = p.streakDir ? p.streakDir + p.streak : '—';
+      return [(i + 1) + '.', name, S.fmtWL(p), S.fmtPct(p.winPct), p.points + ' pts', streak];
+    });
+    const iconImg = await loadImg(st.pod.iconDataUrl);
+    const markImg = await loadImg('./assets/icon-tile.png');
+    drawCard('', 'Final', rows,
+      { header: { pod: st.pod, seasonName: season.name, iconImg, markImg } })
       .then(b => shareImage(b, 'podlog-champion.png', text));
   }
-  function shareGame(g) {
+  async function shareGame(g) {
     const st = Store.state; const season = Store.activeSeason(); if (!season) return;
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
     const cardLabel = (pid) => {
@@ -1350,11 +1416,22 @@
     const rows = g.placements.map((pid, i) => [ord[i], cardLabel(pid)]);
     const elimParts = Object.entries(g.eliminatedBy || {}).filter(([, k]) => k)
       .map(([v, k]) => playerName(k) + ' eliminated ' + playerName(v));
+    const scooped = (g.scooped || []).filter(id => g.placements.includes(id));
+    const subLines = g.placements.map(pid => {
+      const k = (g.eliminatedBy || {})[pid];
+      if (k) return 'Eliminated by ' + playerName(k);
+      if (scooped.includes(pid)) return 'Scooped';
+      return null;
+    });
     const text = st.pod.name + ' — ' + season.name + ' · Game ' + g.number + ' · ' + fmtDate(g.date) + '\n' +
       rows.map(r => r[0] + ' ' + r[1]).join('\n') +
       (elimParts.length ? '\n' + elimParts.join(' · ') : '') +
+      (scooped.length ? '\nScooped: ' + scooped.map(id => playerName(id)).join(', ') : '') +
       (g.firstBlood ? '\nFirst blood: ' + playerName(g.firstBlood) : '');
-    drawCard('Game ' + g.number, st.pod.name + ' · ' + season.name + ' · ' + fmtDate(g.date), rows, { bandColor: st.pod.color })
+    const iconImg = await loadImg(st.pod.iconDataUrl);
+    const markImg = await loadImg('./assets/icon-tile.png');
+    drawCard('', 'Game ' + g.number + ' · ' + fmtDate(g.date), rows,
+      { header: { pod: st.pod, seasonName: season.name, iconImg, markImg }, rowH: 112, subLines })
       .then(b => shareImage(b, 'podlog-game-' + g.number + '.png', text));
   }
 
@@ -1416,11 +1493,16 @@
       }
     });
     $('share-standings').onclick = shareStandings;
-    $('share-hof').onclick = () => {
+    $('share-hof').onclick = async () => {
       const hof = S.hallOfFame(Store.state.players, Store.state.seasons);
-      const rows = hof.rows.slice(0, 6).map(r => ['•', r.label + ': ' + r.name + ' (' + r.value + ')']);
-      const text = 'Hall of Fame\n' + rows.map(r => r[1]).join('\n');
-      drawCard('Hall of Fame', Store.state.pod.name, rows, { bandColor: Store.state.pod.color }).then(b => shareImage(b, 'podlog-hof.png', text));
+      const trunc = n => (n.length > 15 ? n.slice(0, 14) + '…' : n);
+      const rows = hof.rows.slice(0, 6).map(r => [r.label, trunc(r.name), r.value]);
+      const text = 'Hall of Fame\n' + hof.rows.slice(0, 6).map(r => r.label + ': ' + r.name + ' (' + r.value + ')').join('\n');
+      const iconImg = await loadImg(Store.state.pod.iconDataUrl);
+      const markImg = await loadImg('./assets/icon-tile.png');
+      drawCard('', 'Career records', rows,
+        { header: { pod: Store.state.pod, seasonName: 'Hall of Fame', iconImg, markImg }, noHighlight: true, colX: [70, 600, 900], boldLast: true, rightLast: true })
+        .then(b => shareImage(b, 'podlog-hof.png', text));
     };
 
     initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings();
