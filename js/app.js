@@ -850,22 +850,20 @@
     };
   }
 
-  // Drag any bottom sheet down by its grab handle to dismiss it.
-  // The sheet follows the finger; past ~110px (or a fast downward
-  // flick) it slides away and closes, otherwise it springs back.
-  // Touch uses touch events with preventDefault on move, so iOS can
-  // never hand the gesture to the page behind the sheet (scroll
-  // chaining); mouse/trackpad uses pointer events. Buttons and
-  // backdrop taps keep working exactly as before.
+  // Drag a bottom sheet down to dismiss it, from the grab handle or
+  // anywhere on the sheet. A downward drag that starts with the
+  // sheet scrolled to the top becomes a sheet drag (the sheet
+  // follows the finger; past ~110px or a fast flick it closes,
+  // otherwise it springs back). Any other gesture scrolls or taps
+  // normally. Sheet drags claim the gesture, and sheets stop
+  // passing scrolls through (overscroll-behavior: contain in CSS),
+  // so the background page can never be dragged instead.
   function initSheetDrag() {
     $$('.overlay .sheet, .sheet-back .sheet').forEach(sheet => {
-      const grab = sheet.querySelector('.grab');
-      if (!grab) return;
-      let dragging = false, startY = 0, dy = 0, lastY = 0, lastT = 0, vel = 0, touchId = null;
+      let dragging = false, maybe = false, startY = 0, startTop = 0, dy = 0, lastY = 0, lastT = 0, vel = 0, touchId = null;
       const begin = y => {
-        dragging = true; startY = y; dy = 0; vel = 0;
+        maybe = true; dragging = false; startY = y; startTop = sheet.scrollTop; dy = 0; vel = 0;
         lastY = y; lastT = performance.now();
-        sheet.style.transition = 'none';
       };
       const move = y => {
         dy = Math.max(0, y - startY);
@@ -875,8 +873,8 @@
         sheet.style.transform = 'translateY(' + dy + 'px)';
       };
       const end = () => {
-        if (!dragging) return;
-        dragging = false; touchId = null;
+        if (!dragging) { maybe = false; return; }
+        dragging = false; maybe = false; touchId = null;
         sheet.style.transition = '';
         if (dy > 110 || (vel > 0.55 && dy > 40)) {
           sheet.style.transform = 'translateY(105%)';
@@ -886,34 +884,57 @@
           sheet.style.transform = '';
         }
       };
-      grab.addEventListener('touchstart', e => {
+      sheet.addEventListener('touchstart', e => {
         const t = e.changedTouches[0];
         touchId = t.identifier;
         begin(t.clientY);
       }, { passive: true });
-      grab.addEventListener('touchmove', e => {
-        if (!dragging) return;
+      sheet.addEventListener('touchmove', e => {
+        if (!maybe) return;
         const t = Array.from(e.touches).find(x => x.identifier === touchId);
         if (!t) return;
+        const y = t.clientY;
+        if (!dragging) {
+          // Only a downward drag from the top of the sheet becomes a
+          // sheet drag; anything else is a normal scroll or tap.
+          if (y - startY > 10 && startTop <= 0) {
+            dragging = true;
+            sheet.style.transition = 'none';
+          } else if (y - startY < -10 || startTop > 0) {
+            maybe = false;
+            return;
+          } else {
+            return;
+          }
+        }
         e.preventDefault();
-        move(t.clientY);
+        move(y);
       }, { passive: false });
-      grab.addEventListener('touchend', e => {
+      sheet.addEventListener('touchend', e => {
         if (touchId === null) return;
         if (Array.from(e.changedTouches).some(x => x.identifier === touchId)) end();
       });
-      grab.addEventListener('touchcancel', end);
-      grab.addEventListener('pointerdown', e => {
-        if (e.pointerType !== 'mouse') return;
-        begin(e.clientY);
-        try { grab.setPointerCapture(e.pointerId); } catch (err) {}
+      sheet.addEventListener('touchcancel', () => {
+        dragging = false; maybe = false; touchId = null;
+        sheet.style.transition = ''; sheet.style.transform = '';
       });
-      grab.addEventListener('pointermove', e => {
-        if (!dragging || e.pointerType !== 'mouse') return;
-        move(e.clientY);
-      });
-      grab.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(); });
-      grab.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') end(); });
+      // Mouse/trackpad: drag from the grab handle only.
+      const grab = sheet.querySelector('.grab');
+      if (grab) {
+        grab.addEventListener('pointerdown', e => {
+          if (e.pointerType !== 'mouse') return;
+          dragging = true; maybe = true; startY = e.clientY; dy = 0; vel = 0;
+          lastY = e.clientY; lastT = performance.now();
+          sheet.style.transition = 'none';
+          try { grab.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        grab.addEventListener('pointermove', e => {
+          if (!dragging || e.pointerType !== 'mouse') return;
+          move(e.clientY);
+        });
+        grab.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(); });
+        grab.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') end(); });
+      }
     });
   }
   let entryEditingId = null;
