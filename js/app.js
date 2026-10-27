@@ -1291,7 +1291,12 @@
     const W = 1080, rowH = opts.rowH || 88, H = 320 + rows.length * rowH + 80;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
-    c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const cardBg = dark ? '#1c1c1e' : '#ffffff';
+    const cardText = dark ? '#f5f5f7' : '#111';
+    const cardMuted = dark ? '#98989f' : '#6e6e73';
+    const cardLead = dark ? '#0f2e18' : '#e5f4e9';
+    c.fillStyle = cardBg; c.fillRect(0, 0, W, H);
     const bandColor = (opts.header && opts.header.pod.color) || opts.bandColor || '#3E2FDC';
     const ink = inkOn(bandColor);
     c.fillStyle = bandColor; c.fillRect(0, 0, W, 220);
@@ -1334,13 +1339,13 @@
       c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = ink === '#fff' ? 'rgba(255,255,255,.85)' : 'rgba(17,17,17,.7)';
       c.fillText(title, 60, 165);
     }
-    c.fillStyle = '#6e6e73'; c.font = '500 32px -apple-system, sans-serif';
+    c.fillStyle = cardMuted; c.font = '500 32px -apple-system, sans-serif';
     c.fillText(sub, 60, 275);
     const cols = opts.colX || [70, 230, 565, 695, 835, 975];
     rows.forEach((r, i) => {
       const y = 340 + i * rowH;
-      if (i === 0 && !opts.noHighlight) { c.fillStyle = '#e5f4e9'; roundRect(c, 40, y - 58, W - 80, rowH - 8, 18); c.fill(); }
-      c.fillStyle = '#111';
+      if (i === 0 && !opts.noHighlight) { c.fillStyle = cardLead; roundRect(c, 40, y - 58, W - 80, rowH - 8, 18); c.fill(); }
+      c.fillStyle = cardText;
       if (r.length > 2) {
         r.forEach((cell, j) => {
           const last = j === r.length - 1;
@@ -1354,7 +1359,7 @@
         c.font = '500 36px -apple-system, sans-serif';
         c.fillText(r[1], 420, y);
         const sub = opts.subLines && opts.subLines[i];
-        if (sub) { c.fillStyle = '#6e6e73'; c.font = '500 28px -apple-system, sans-serif'; c.fillText(sub, 420, y + 38); }
+        if (sub) { c.fillStyle = cardMuted; c.font = '500 28px -apple-system, sans-serif'; c.fillText(sub, 420, y + 38); }
       }
     });
     return new Promise(res => cv.toBlob(res, 'image/png'));
