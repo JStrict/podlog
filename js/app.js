@@ -849,6 +849,46 @@
       renderCalendar();
     };
   }
+
+  // Drag any bottom sheet down by its grab handle to dismiss it.
+  // The sheet follows the finger; past ~110px (or a fast downward
+  // flick) it slides away and closes, otherwise it springs back.
+  // Buttons and backdrop taps keep working exactly as before.
+  function initSheetDrag() {
+    $$('.overlay .sheet, .sheet-back .sheet').forEach(sheet => {
+      const grab = sheet.querySelector('.grab');
+      if (!grab) return;
+      let dragging = false, startY = 0, dy = 0, lastY = 0, lastT = 0, vel = 0;
+      grab.addEventListener('pointerdown', e => {
+        dragging = true; startY = e.clientY; dy = 0; vel = 0;
+        lastY = e.clientY; lastT = performance.now();
+        sheet.style.transition = 'none';
+        try { grab.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      grab.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        dy = Math.max(0, e.clientY - startY);
+        const now = performance.now();
+        if (now > lastT) vel = (e.clientY - lastY) / (now - lastT);
+        lastY = e.clientY; lastT = now;
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      });
+      const end = () => {
+        if (!dragging) return;
+        dragging = false;
+        sheet.style.transition = '';
+        if (dy > 110 || (vel > 0.55 && dy > 40)) {
+          sheet.style.transform = 'translateY(105%)';
+          const ov = sheet.closest('.overlay, .sheet-back');
+          setTimeout(() => { if (ov) ov.classList.remove('open'); sheet.style.transform = ''; }, 340);
+        } else {
+          sheet.style.transform = '';
+        }
+      };
+      grab.addEventListener('pointerup', end);
+      grab.addEventListener('pointercancel', end);
+    });
+  }
   let entryEditingId = null;
   let entryColor = null;
 
@@ -1549,7 +1589,7 @@
         .then(b => shareImage(b, 'podlog-hof.png', text));
     };
 
-    initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings();
+    initCreate1(); initCreate2(); initCreate3(); initLog(); initCalendar(); initSettings(); initSheetDrag();
 
     if (Store.state.setupDone && Store.state.pod) { enterMain('standings'); showBackupNudge(Store.activeSeason(), 'half'); }
     else show('s-first');
