@@ -1236,7 +1236,7 @@
     const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
     return lum > 0.6 ? '#111' : '#fff';
   }
-  function drawCard(title, sub, rows, opts) {
+  async function drawCard(title, sub, rows, opts) {
     opts = opts || {};
     const W = 1080, rowH = 88, H = 320 + rows.length * rowH + 80;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -1274,8 +1274,13 @@
         c.restore();
       }
     } else {
-      c.fillStyle = ink; c.font = '800 64px -apple-system, sans-serif';
-      c.fillText('PODLOG', 60, 105);
+      const wm = await loadImg(ink === '#fff' ? './assets/PODLOG-TEXT-WHITE.png' : './assets/PODLOG-TEXT-BLACK.png');
+      if (wm) {
+        c.drawImage(wm, 60, 10, 308, 100);
+      } else {
+        c.fillStyle = ink; c.font = '800 64px -apple-system, sans-serif';
+        c.fillText('PODLOG', 60, 105);
+      }
       c.font = '500 36px -apple-system, sans-serif'; c.fillStyle = ink === '#fff' ? 'rgba(255,255,255,.85)' : 'rgba(17,17,17,.7)';
       c.fillText(title, 60, 165);
     }
@@ -1323,7 +1328,7 @@
     });
     const text = st.pod.name + ' — ' + season.name + '\n' + rows.map(r => r.join('  ')).join('\n');
     const iconImg = await loadImg(st.pod.iconDataUrl);
-    const markImg = await loadImg('./assets/icon-tile.jpg');
+    const markImg = await loadImg('./assets/icon-tile.png');
     drawCard('', 'Game ' + season.games.length + (season.type === 'games' ? ' of ' + season.gameCount : ''), rows,
       { header: { pod: st.pod, seasonName: season.name, iconImg, markImg } })
       .then(b => shareImage(b, 'podlog-standings.png', text));
