@@ -1,12 +1,12 @@
 /* PodLog service worker — offline-first app shell */
-const CACHE = 'podlog-v30';
+const CACHE = 'podlog-v31';
 const ASSETS = [
   './', './index.html',
   './css/styles.css',
   './js/scoring.js', './js/store.js', './js/app.js',
   './manifest.json',
-  './assets/icon-tile.png', './assets/PODLOG-QUILL-LOGO.png',
-  './assets/PODLOG-TEXT-WHITE.png', './assets/PODLOG-TEXT-BLACK.png',
+  './assets/icon-tile.png', './assets/PODLOG-QUILL-LOGO-OUTLINE.png',
+  './assets/PODLOG-TEXT-BLACKwOUTLINE.png',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 self.addEventListener('install', e => {

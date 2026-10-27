@@ -1274,9 +1274,9 @@
         c.restore();
       }
     } else {
-      const wm = await loadImg(ink === '#fff' ? './assets/PODLOG-TEXT-WHITE.png' : './assets/PODLOG-TEXT-BLACK.png');
+      const wm = await loadImg('./assets/PODLOG-TEXT-BLACKwOUTLINE.png');
       if (wm) {
-        c.drawImage(wm, 60, 10, 308, 100);
+        c.drawImage(wm, 60, 10, 301, 100);
       } else {
         c.fillStyle = ink; c.font = '800 64px -apple-system, sans-serif';
         c.fillText('PODLOG', 60, 105);
