@@ -811,6 +811,7 @@
     $('cal-prev').onclick = () => { calM--; if (calM < 0) { calM = 11; calY--; } renderCalendar(); };
     $('cal-next').onclick = () => { calM++; if (calM > 11) { calM = 0; calY++; } renderCalendar(); };
     $('cal-newbtn').onclick = () => openEntryNew();
+    $('share-cal').onclick = shareCalendar;
     clearable($('entry-title'));
     clearable($('entry-notes'));
     $('entry-cancel').onclick = () => $('ov-entry').classList.remove('open');
@@ -1438,6 +1439,44 @@
     drawCard('', 'Game ' + g.number + ' · ' + fmtDate(g.date), rows,
       { header: { pod: st.pod, seasonName: season.name, iconImg, markImg }, rowH: 112, subLines })
       .then(b => shareImage(b, 'podlog-game-' + g.number + '.png', text));
+  }
+
+  function calTypeLabel(t) {
+    if (t === 'game') return 'Logged game';
+    if (t === 'season') return 'Season';
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  async function shareCalendar() {
+    const st = Store.state;
+    const prefix = calY + '-' + String(calM + 1).padStart(2, '0');
+    const monthName = new Date(calY, calM, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const entries = [];
+    st.calendar.forEach(e => { if (e.date.indexOf(prefix) === 0) entries.push(e); });
+    (Store.activeSeason() || { games: [] }).games.forEach(g => {
+      if (g.date.indexOf(prefix) === 0) entries.push({ date: g.date, title: 'Game ' + g.number + ' · ' + playerName(g.placements[0]) + ' 1st', type: 'game' });
+    });
+    entries.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    const short = iso => {
+      const p = iso.split('-');
+      return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+    const trunc = s => s.length > 32 ? s.slice(0, 31) + '…' : s;
+    let rows, subLines;
+    if (!entries.length) {
+      rows = [['No events this month', '']];
+      subLines = [];
+    } else {
+      rows = entries.map(e => [short(e.date), trunc(e.title)]);
+      subLines = entries.map(e => calTypeLabel(e.type));
+    }
+    const season = Store.activeSeason();
+    const text = st.pod.name + ' — ' + monthName + (entries.length ? '\n' + entries.map(e => short(e.date) + '  ' + e.title).join('\n') : '\nNo events this month');
+    const iconImg = await loadImg(st.pod.iconDataUrl);
+    const markImg = await loadImg('./assets/icon-tile.png');
+    drawCard('', season ? season.name : '', rows,
+      { header: { pod: st.pod, seasonName: monthName, iconImg, markImg }, noHighlight: true, rowH: 112, subLines })
+      .then(b => shareImage(b, 'podlog-calendar-' + prefix + '.png', text));
   }
 
   // ---------- INIT ----------
