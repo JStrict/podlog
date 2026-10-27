@@ -853,29 +853,30 @@
   // Drag any bottom sheet down by its grab handle to dismiss it.
   // The sheet follows the finger; past ~110px (or a fast downward
   // flick) it slides away and closes, otherwise it springs back.
-  // Buttons and backdrop taps keep working exactly as before.
+  // Touch uses touch events with preventDefault on move, so iOS can
+  // never hand the gesture to the page behind the sheet (scroll
+  // chaining); mouse/trackpad uses pointer events. Buttons and
+  // backdrop taps keep working exactly as before.
   function initSheetDrag() {
     $$('.overlay .sheet, .sheet-back .sheet').forEach(sheet => {
       const grab = sheet.querySelector('.grab');
       if (!grab) return;
-      let dragging = false, startY = 0, dy = 0, lastY = 0, lastT = 0, vel = 0;
-      grab.addEventListener('pointerdown', e => {
-        dragging = true; startY = e.clientY; dy = 0; vel = 0;
-        lastY = e.clientY; lastT = performance.now();
+      let dragging = false, startY = 0, dy = 0, lastY = 0, lastT = 0, vel = 0, touchId = null;
+      const begin = y => {
+        dragging = true; startY = y; dy = 0; vel = 0;
+        lastY = y; lastT = performance.now();
         sheet.style.transition = 'none';
-        try { grab.setPointerCapture(e.pointerId); } catch (err) {}
-      });
-      grab.addEventListener('pointermove', e => {
-        if (!dragging) return;
-        dy = Math.max(0, e.clientY - startY);
+      };
+      const move = y => {
+        dy = Math.max(0, y - startY);
         const now = performance.now();
-        if (now > lastT) vel = (e.clientY - lastY) / (now - lastT);
-        lastY = e.clientY; lastT = now;
+        if (now > lastT) vel = (y - lastY) / (now - lastT);
+        lastY = y; lastT = now;
         sheet.style.transform = 'translateY(' + dy + 'px)';
-      });
+      };
       const end = () => {
         if (!dragging) return;
-        dragging = false;
+        dragging = false; touchId = null;
         sheet.style.transition = '';
         if (dy > 110 || (vel > 0.55 && dy > 40)) {
           sheet.style.transform = 'translateY(105%)';
@@ -885,8 +886,34 @@
           sheet.style.transform = '';
         }
       };
-      grab.addEventListener('pointerup', end);
-      grab.addEventListener('pointercancel', end);
+      grab.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        touchId = t.identifier;
+        begin(t.clientY);
+      }, { passive: true });
+      grab.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        const t = Array.from(e.touches).find(x => x.identifier === touchId);
+        if (!t) return;
+        e.preventDefault();
+        move(t.clientY);
+      }, { passive: false });
+      grab.addEventListener('touchend', e => {
+        if (touchId === null) return;
+        if (Array.from(e.changedTouches).some(x => x.identifier === touchId)) end();
+      });
+      grab.addEventListener('touchcancel', end);
+      grab.addEventListener('pointerdown', e => {
+        if (e.pointerType !== 'mouse') return;
+        begin(e.clientY);
+        try { grab.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      grab.addEventListener('pointermove', e => {
+        if (!dragging || e.pointerType !== 'mouse') return;
+        move(e.clientY);
+      });
+      grab.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(); });
+      grab.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') end(); });
     });
   }
   let entryEditingId = null;
