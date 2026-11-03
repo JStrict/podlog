@@ -88,17 +88,25 @@
       b.onclick = () => { cb(c.hex); swatchRow(el, c.hex, cb); };
       el.appendChild(b);
     });
-    // Custom color picker: any hex, not just the presets. It shows the
-    // current color, and takes the selected ring when the current color
-    // is not one of the presets (e.g. a legacy Gold/Silver/Charcoal).
+    // Custom color picker, shown as a rainbow swatch so it never reads
+    // as just another preset. The rainbow is a pointer-events-none
+    // overlay: taps land on the real color input beneath it, which
+    // opens at the current color. The wrap takes the selected ring
+    // when the current color is not one of the presets (e.g. a
+    // legacy Gold/Silver/Charcoal).
+    const wrap = document.createElement('span');
+    wrap.className = 'swatch-pick-wrap' + (COLORS.some(c => c.hex === sel) ? '' : ' sel');
     const pick = document.createElement('input');
     pick.type = 'color';
     pick.value = /^#[0-9a-fA-F]{6}$/.test(sel || '') ? sel : '#3E2FDC';
     pick.title = 'Custom color';
     pick.setAttribute('aria-label', 'Custom color');
-    pick.className = 'swatch-pick' + (COLORS.some(c => c.hex === sel) ? '' : ' sel');
     pick.onchange = () => { cb(pick.value); swatchRow(el, pick.value, cb); };
-    el.appendChild(pick);
+    const rainbow = document.createElement('span');
+    rainbow.className = 'swatch-rainbow';
+    wrap.appendChild(pick);
+    wrap.appendChild(rainbow);
+    el.appendChild(wrap);
   }
 
   function initCreate1() {
