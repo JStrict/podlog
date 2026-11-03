@@ -83,8 +83,9 @@
     COLORS.forEach(c => {
       const b = document.createElement('button');
       b.style.background = c.hex; b.title = c.name;
+      b.dataset.hex = c.hex.toLowerCase();
       b.setAttribute('aria-label', c.name);
-      if (c.hex === sel) b.classList.add('sel');
+      if (c.hex.toLowerCase() === (sel || '').toLowerCase()) b.classList.add('sel');
       b.onclick = () => { cb(c.hex); swatchRow(el, c.hex, cb); };
       el.appendChild(b);
     });
@@ -96,13 +97,24 @@
     // selected ring when the current color is not one of the presets
     // (e.g. a legacy Gold/Silver/Charcoal).
     const wrap = document.createElement('span');
-    wrap.className = 'swatch-pick-wrap' + (COLORS.some(c => c.hex === sel) ? '' : ' sel');
+    wrap.className = 'swatch-pick-wrap' + (COLORS.some(c => c.hex.toLowerCase() === (sel || '').toLowerCase()) ? '' : ' sel');
     const pick = document.createElement('input');
     pick.type = 'color';
     pick.value = /^#[0-9a-fA-F]{6}$/.test(sel || '') ? sel : '#3E2FDC';
     pick.title = 'Custom color';
     pick.setAttribute('aria-label', 'Custom color');
-    pick.onchange = () => { cb(pick.value); swatchRow(el, pick.value, cb); };
+    // Update the selection rings IN PLACE and never rebuild the row
+    // here. Safari fires change continuously while the picker is
+    // dragged (not just on dismiss), and rebuilding would destroy
+    // this input mid-drag, which dismisses the picker instantly:
+    // taps worked, drags died. Preset buttons above may still
+    // rebuild (no picker is open for those).
+    pick.onchange = () => {
+      const hex = pick.value.toLowerCase();
+      cb(pick.value);
+      el.querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.hex === hex));
+      wrap.classList.toggle('sel', !COLORS.some(c => c.hex.toLowerCase() === hex));
+    };
     const rainbow = document.createElement('span');
     rainbow.className = 'swatch-rainbow';
     wrap.appendChild(pick);
