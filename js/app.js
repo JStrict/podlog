@@ -88,12 +88,13 @@
       b.onclick = () => { cb(c.hex); swatchRow(el, c.hex, cb); };
       el.appendChild(b);
     });
-    // Custom color picker, shown as a rainbow swatch so it never reads
-    // as just another preset. The rainbow is a pointer-events-none
+    // Custom color picker, shown as a rainbow ring so it never reads
+    // as just another preset. The ring is a pointer-events-none
     // overlay: taps land on the real color input beneath it, which
-    // opens at the current color. The wrap takes the selected ring
-    // when the current color is not one of the presets (e.g. a
-    // legacy Gold/Silver/Charcoal).
+    // opens at the current color. The hole shows the app background,
+    // so the ring reads on light and dark. The wrap takes the
+    // selected ring when the current color is not one of the presets
+    // (e.g. a legacy Gold/Silver/Charcoal).
     const wrap = document.createElement('span');
     wrap.className = 'swatch-pick-wrap' + (COLORS.some(c => c.hex === sel) ? '' : ' sel');
     const pick = document.createElement('input');

@@ -138,6 +138,10 @@ h2 { font-size: 22px; margin: 0; }
   background: conic-gradient(#e53935, #fb8c00, #fdd835, #43a047, #1e88e5, #8e24aa, #e53935);
   border: 2px solid transparent;
 }
+.swatches .swatch-rainbow::after {
+  content: ''; position: absolute; top: 24%; left: 24%; width: 52%; height: 52%;
+  border-radius: 50%; background: var(--bg); pointer-events: none;
+}
 .swatches .swatch-pick-wrap.sel .swatch-rainbow { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .swatches.small .swatch-pick-wrap { width: 28px; height: 28px; }
 
