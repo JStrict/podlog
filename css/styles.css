@@ -136,13 +136,23 @@ h2 { font-size: 22px; margin: 0; }
   position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
   background: linear-gradient(90deg, #e53935, #fb8c00, #fdd835, #43a047, #1e88e5, #8e24aa);
   background: conic-gradient(#e53935, #fb8c00, #fdd835, #43a047, #1e88e5, #8e24aa, #e53935);
-  border: 2px solid transparent;
+  /* Cut the ring shape with a mask instead of relying on
+     border-radius to clip the gradient: iOS Safari rendered the
+     1.26.2 ring with flattened sides (rounded square, not a
+     circle). The mask's white band is the ring; transparent center
+     is the hole and transparent corners hide the square edges.
+     White (not black) so the band reads under both alpha and
+     luminance mask interpretations. */
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 51%, white 52%, white 99%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, transparent 51%, white 52%, white 99%, transparent 100%);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
 }
 .swatches .swatch-rainbow::after {
   content: ''; position: absolute; top: 24%; left: 24%; width: 52%; height: 52%;
   border-radius: 50%; background: var(--bg); pointer-events: none;
 }
-.swatches .swatch-pick-wrap.sel .swatch-rainbow { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.swatches .swatch-pick-wrap.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .swatches.small .swatch-pick-wrap { width: 28px; height: 28px; }
 
 /* stepper */
