@@ -88,6 +88,17 @@
       b.onclick = () => { cb(c.hex); swatchRow(el, c.hex, cb); };
       el.appendChild(b);
     });
+    // Custom color picker: any hex, not just the presets. It shows the
+    // current color, and takes the selected ring when the current color
+    // is not one of the presets (e.g. a legacy Gold/Silver/Charcoal).
+    const pick = document.createElement('input');
+    pick.type = 'color';
+    pick.value = /^#[0-9a-fA-F]{6}$/.test(sel || '') ? sel : '#3E2FDC';
+    pick.title = 'Custom color';
+    pick.setAttribute('aria-label', 'Custom color');
+    pick.className = 'swatch-pick' + (COLORS.some(c => c.hex === sel) ? '' : ' sel');
+    pick.onchange = () => { cb(pick.value); swatchRow(el, pick.value, cb); };
+    el.appendChild(pick);
   }
 
   function initCreate1() {

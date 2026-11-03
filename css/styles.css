@@ -126,6 +126,13 @@ h2 { font-size: 22px; margin: 0; }
 }
 .swatches button.sel { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
 .swatches.small button { width: 28px; height: 28px; }
+.swatches input.swatch-pick {
+  width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; background: none;
+}
+.swatches input.swatch-pick.sel { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.swatches input.swatch-pick::-webkit-color-swatch-wrapper { padding: 0; }
+.swatches input.swatch-pick::-webkit-color-swatch { border: none; border-radius: 50%; }
+.swatches.small input.swatch-pick { width: 28px; height: 28px; }
 
 /* stepper */
 .stepper-row { display: flex; align-items: center; gap: 12px; }

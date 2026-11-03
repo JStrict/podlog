@@ -4,14 +4,13 @@
 
   const KEY = 'podlog-state-v1';
   const COLORS = [
-    { name: 'White',   hex: '#f5f5f7' },
     { name: 'Indigo',  hex: '#3E2FDC' },
-    { name: 'Black',   hex: '#1c1c1e' },
+    { name: 'Yellow',  hex: '#EAB308' },
+    { name: 'Blue',    hex: '#2563EB' },
     { name: 'Red',     hex: '#d92d20' },
     { name: 'Green',   hex: '#1f8a3b' },
-    { name: 'Gold',    hex: '#d9a821' },
-    { name: 'Silver',  hex: '#b9b9c0' },
-    { name: 'Charcoal',hex: '#4a4a4e' },
+    { name: 'Black',   hex: '#1c1c1e' },
+    { name: 'White',   hex: '#f5f5f7' },
   ];
 
   function uid() {
