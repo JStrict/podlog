@@ -14,7 +14,7 @@
   --red: #d92d20;
   --gold: #b8860b;
   --gold-bg: #fdf3dd;
-  --radius: 14px;
+  --radius: 12px;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", sans-serif;
 }
 [data-theme="dark"] {
@@ -195,8 +195,8 @@ h2 { font-size: 22px; margin: 0; }
 /* folder tabs */
 .folder-tabs { display: flex; padding: 14px 10px 0; gap: 4px; position: sticky; top: 0; background: var(--bg); z-index: 5; }
 .folder-tabs button {
-  flex: 1; border: none; background: var(--card); color: var(--text); font-family: var(--font);
-  font-size: 13px; font-weight: 600; padding: 13px 4px 11px; border-radius: 10px 10px 0 0; cursor: pointer;
+  flex: 1; border: none; background: transparent; color: var(--text2); font-family: var(--font);
+  font-size: 14px; font-weight: 600; padding: 13px 4px 11px; border-radius: 10px 10px 0 0; cursor: pointer;
 }
 .folder-tabs button.active { background: var(--pod); color: var(--on-blue); }
 .tabpane { flex: 1; display: flex; flex-direction: column; border-top: 3px solid var(--pod); }
@@ -243,14 +243,19 @@ h2 { font-size: 22px; margin: 0; }
 .pod-head h2 { font-size: 19px; }
 .pod-head .muted { margin: 2px 0 0; font-size: 13px; }
 .share-btn {
-  margin-left: auto; width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid var(--border);
-  background: var(--bg); font-size: 17px; cursor: pointer; color: var(--text); flex: none;
+  margin-left: auto; width: 34px; height: 34px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: var(--bg); cursor: pointer; color: var(--text); flex: none;
+  display: flex; align-items: center; justify-content: center;
 }
+.share-btn svg { width: 19px; height: 19px; }
 .progress { height: 10px; background: var(--card); border-radius: 5px; overflow: hidden; margin-top: 4px; }
 .progress-fill { height: 100%; background: var(--pod); border-radius: 5px; transition: width .3s; }
-table.standings { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; }
-table.standings th { text-align: left; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; padding: 6px 4px; font-weight: 700; }
-table.standings td { padding: 11px 4px; border-top: 1px solid var(--border); }
+table.standings { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 15px; font-variant-numeric: tabular-nums; }
+table.standings th { text-align: left; font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; padding: 6px 4px; font-weight: 700; }
+table.standings td { padding: 14px 4px; border-top: 1px solid var(--border); }
+/* Secondary columns sit back; Win% (4th column) stays strong as the primary sort. */
+table.standings td.num { color: var(--text2); }
+table.standings td.num:nth-child(4) { color: var(--text); font-weight: 700; }
 table.standings tr.leader td { background: var(--green-bg); }
 table.standings tr.leader td:first-child { border-radius: 10px 0 0 10px; }
 table.standings tr.leader td:last-child { border-radius: 0 10px 10px 0; }
@@ -375,7 +380,7 @@ table.standings .rk { font-weight: 800; width: 30px; }
 .avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .stat-grid .stat { background: var(--card); border-radius: 12px; padding: 12px 4px; text-align: center; }
-.stat-grid .stat b { display: block; font-size: 17px; }
+.stat-grid .stat b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
 .stat-grid .stat span { font-size: 11px; color: var(--text2); font-weight: 600; }
 .kv { font-size: 14px; margin: 6px 0; }
 
