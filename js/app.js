@@ -828,7 +828,31 @@
       const b = document.createElement('button');
       b.className = 'btn-secondary'; b.style.padding = '14px 10px'; b.style.fontSize = '14px';
       b.textContent = a.title;
-      b.onclick = () => quickAdd(a);
+      // Long-press to delete: hold ~550ms, then confirm. A normal tap
+      // still quick-adds, and any move cancels the hold (scrolling).
+      // The hold flag swallows the click that follows a confirmed or
+      // cancelled long-press, so it never also quick-adds. Selection
+      // and callout are disabled in CSS so iOS never highlights the
+      // label mid-hold.
+      let lpTimer = null, lpFired = false, lpX = 0, lpY = 0;
+      b.addEventListener('pointerdown', e => {
+        lpFired = false; lpX = e.clientX; lpY = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpFired = true;
+          if (confirm('Delete quick action "' + a.title + '"?')) {
+            Store.state.quickActions = Store.state.quickActions.filter(x => x.id !== a.id);
+            Store.save(); renderCalendar();
+          }
+        }, 550);
+      });
+      const cancelLp = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+      b.addEventListener('pointermove', e => {
+        if (lpTimer && (Math.abs(e.clientX - lpX) > 12 || Math.abs(e.clientY - lpY) > 12)) cancelLp();
+      });
+      b.addEventListener('pointerup', cancelLp);
+      b.addEventListener('pointercancel', cancelLp);
+      b.addEventListener('contextmenu', e => e.preventDefault());
+      b.onclick = () => { if (lpFired) { lpFired = false; return; } quickAdd(a); };
       q.appendChild(b);
     });
     $('cal-logbtn').onclick = () => { if ((Store.activeSeason() || {}).status === 'active') openLog(); };
